@@ -1,10 +1,12 @@
-import { Heart, Activity, Droplet, Moon, Plus, CheckCircle2, Circle, Dumbbell } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Heart, Activity, Droplet, Moon, Dumbbell } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/server";
 import { PageTransition } from "@/components/ui/page-transition";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LogHealthDialog } from "@/components/life/log-health-dialog";
+import { AddHabitDialog } from "@/components/life/add-habit-dialog";
+import { HabitCard } from "@/components/life/habit-card";
 
 export default async function LifeEngine() {
   const supabase = await createClient();
@@ -20,29 +22,29 @@ export default async function LifeEngine() {
     if (mData) metrics = mData;
     if (hData) habits = hData;
   } catch (error) {
-    console.error("Supabase not connected yet.");
+    console.error("Supabase query error:", error);
   }
 
-  // Fallback to empty if not found
-  const todayMetric = metrics[0] || { calories: 0, water_intake: 0, sleep_hours: 0, weight: 0 };
+  const todayMetric = metrics[0] || { calories: 0, water_intake: 0, sleep_hours: 0, weight: null };
 
   return (
     <PageTransition className="flex flex-col gap-8 max-w-7xl mx-auto pb-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <Heart className="w-8 h-8 text-primary" /> Life Engine
           </h1>
-          <p className="text-muted-foreground">Monitor health, habits, and physical well-being.</p>
+          <p className="text-muted-foreground">Monitor health, habits, and physical longevity.</p>
         </div>
-        <Button className="gap-2 shadow-sm shrink-0">
-          <Plus className="w-4 h-4" /> Log Entry
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <LogHealthDialog current={todayMetric} />
+          <AddHabitDialog />
+        </div>
       </div>
 
       {/* Health Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-border/60 hover:border-primary/20 transition-all duration-300 shadow-sm hover:shadow-md">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Calories</CardTitle>
@@ -84,7 +86,7 @@ export default async function LifeEngine() {
           <CardContent>
             <div className="text-3xl font-bold tracking-tight">{todayMetric.weight || "--"} <span className="text-sm font-medium text-muted-foreground">kg</span></div>
             <p className="text-xs font-medium text-muted-foreground mt-3 flex items-center gap-1 opacity-70">
-              Track to see trends
+              Track to observe longevity trends
             </p>
           </CardContent>
         </Card>
@@ -98,43 +100,12 @@ export default async function LifeEngine() {
             icon={Dumbbell}
             title="No habits tracked"
             description="Build consistency by adding daily or weekly habits to your Life Engine."
-            actionLabel="Create Habit"
+            actionLabel="Create First Habit"
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {habits.map((habit) => (
-              <Card 
-                key={habit.id} 
-                className={`border-border/60 cursor-pointer transition-all duration-300 hover:shadow-md group ${
-                  habit.completed_today 
-                    ? "bg-primary/5 border-primary/30 hover:bg-primary/10" 
-                    : "hover:border-primary/40"
-                }`}
-              >
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="transition-transform group-hover:scale-110">
-                      {habit.completed_today ? (
-                        <CheckCircle2 className="w-7 h-7 text-primary" />
-                      ) : (
-                        <Circle className="w-7 h-7 text-muted-foreground/50 group-hover:text-primary/50" />
-                      )}
-                    </div>
-                    <div className="flex flex-col">
-                      <h3 className={`font-bold transition-colors ${habit.completed_today ? "text-muted-foreground line-through" : ""}`}>
-                        {habit.title}
-                      </h3>
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{habit.frequency}</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className={`text-2xl font-bold tracking-tight ${habit.streak > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-                      {habit.streak}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase">STREAK</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <HabitCard key={habit.id} habit={habit} />
             ))}
           </div>
         )}
