@@ -5,7 +5,10 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   await supabase.auth.signOut();
   const url = new URL(request.url);
-  return NextResponse.redirect(`${url.origin}/login`, {
+  const response = NextResponse.redirect(`${url.origin}/login`, {
     status: 302,
   });
+  response.cookies.delete('vos_founder_code');
+  response.cookies.delete('vansh_founder_auth');
+  return response;
 }

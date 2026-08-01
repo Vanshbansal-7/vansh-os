@@ -34,17 +34,21 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const founderCode = request.cookies.get('vos_founder_code')?.value || request.cookies.get('vansh_founder_auth')?.value
+  const isFounder = founderCode === '2005'
+  const isAuthenticated = !!user || isFounder
+
   // Protect all engine routes. Ignore auth pages, API routes, and static assets.
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth')
   const isStaticFile = request.nextUrl.pathname.startsWith('/_next') || request.nextUrl.pathname.startsWith('/favicon')
 
-  if (!user && !isAuthPage && !isStaticFile) {
+  if (!isAuthenticated && !isAuthPage && !isStaticFile) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthPage) {
+  if (isAuthenticated && isAuthPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

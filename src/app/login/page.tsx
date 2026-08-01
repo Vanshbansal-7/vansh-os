@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Lock, Sparkles, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import { Mail, Lock, Sparkles, ArrowRight, Loader2, ShieldCheck, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ export default function LoginPage() {
   // Email form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passcode, setPasscode] = useState("");
 
   const handleGitHubLogin = async () => {
     setLoading(true);
@@ -38,6 +39,27 @@ export default function LoginPage() {
     }
   };
 
+  const handleFounderCodeEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passcode) return;
+    setLoading(true);
+    setErrorMsg(null);
+
+    if (passcode.trim() === "2005") {
+      // Set founder cookies for authentication bypass
+      document.cookie = "vos_founder_code=2005; path=/; max-age=31536000; SameSite=Lax";
+      document.cookie = "vansh_founder_auth=2005; path=/; max-age=31536000; SameSite=Lax";
+      setSuccessMsg("Founder Access Granted (2005). Initializing Vansh OS...");
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 300);
+    } else {
+      setErrorMsg("Incorrect Founder Code. Please enter 2005.");
+      setLoading(false);
+    }
+  };
+
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
@@ -51,7 +73,6 @@ export default function LoginPage() {
       });
 
       if (error) {
-        // If user does not exist or credentials invalid, try sign up
         if (error.message.toLowerCase().includes("invalid login credentials")) {
           setErrorMsg("Invalid credentials. If you haven't created an account yet, switch to Sign Up.");
         } else {
@@ -152,14 +173,15 @@ export default function LoginPage() {
               <span className="w-full border-t border-border/60" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground font-semibold">Or Email</span>
+              <span className="bg-card px-2 text-muted-foreground font-semibold">Or Choose Access Method</span>
             </div>
           </div>
 
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="passcode" className="font-semibold text-primary">Code 2005</TabsTrigger>
             </TabsList>
 
             <TabsContent value="signin">
@@ -239,6 +261,43 @@ export default function LoginPage() {
 
                 <Button type="submit" className="w-full h-10 font-semibold shadow-sm" disabled={loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="passcode">
+              <form onSubmit={handleFounderCodeEntry} className="space-y-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="founder-code">Founder Secret Code</Label>
+                    <span className="text-[11px] text-muted-foreground bg-primary/10 px-2 py-0.5 rounded text-primary font-semibold">Bypass</span>
+                  </div>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="founder-code"
+                      type="password"
+                      placeholder="Enter 2005"
+                      className="pl-9 text-base tracking-widest font-mono font-semibold"
+                      value={passcode}
+                      onChange={(e) => setPasscode(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Private direct bypass for founder access. Enter <strong>2005</strong> to enter instantly.
+                  </p>
+                </div>
+
+                <Button type="submit" className="w-full h-10 font-semibold shadow-sm gap-2" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>Enter OS with Code 2005</span>
+                    </>
+                  )}
                 </Button>
               </form>
             </TabsContent>

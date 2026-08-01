@@ -59,11 +59,13 @@ export function AppSidebar() {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user?.email) {
         setUserEmail(data.user.email);
+      } else if (typeof document !== "undefined" && (document.cookie.includes("vos_founder_code=2005") || document.cookie.includes("vansh_founder_auth=2005"))) {
+        setUserEmail("vanshbansal0210@gmail.com");
       }
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null);
+      setUserEmail(session?.user?.email ?? (document.cookie.includes("vos_founder_code=2005") ? "vanshbansal0210@gmail.com" : null));
     });
 
     return () => {
@@ -72,6 +74,8 @@ export function AppSidebar() {
   }, [supabase]);
 
   const handleSignOut = async () => {
+    document.cookie = "vos_founder_code=; path=/; max-age=0";
+    document.cookie = "vansh_founder_auth=; path=/; max-age=0";
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
