@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 
-export default function TerminalEntryPage() {
-  const router = useRouter();
-  
+interface TerminalOverlayProps {
+  onUnlock: () => void;
+}
+
+export function TerminalOverlay({ onUnlock }: TerminalOverlayProps) {
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<React.ReactNode[]>([
     "NEURAL PROFILE SYS.V.1.0",
@@ -13,6 +14,7 @@ export default function TerminalEntryPage() {
     "> type 'help' for available commands"
   ]);
   const [isAwaitingPassword, setIsAwaitingPassword] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,13 +43,15 @@ export default function TerminalEntryPage() {
           <span key={Date.now()} className="text-[#00ff41] font-bold">ACCESS GRANTED. INITIALIZING SYSTEM...</span>
         ]);
         
-        // Set cookies and redirect
+        // Ensure backend cookies are set just in case
         document.cookie = "vos_founder_code=2005; path=/; max-age=31536000; SameSite=Lax";
-        document.cookie = "vansh_founder_auth=2005; path=/; max-age=31536000; SameSite=Lax";
         
+        // Trigger fade out
+        setTimeout(() => setIsFadingOut(true), 800);
+        
+        // Remove overlay after fade completes
         setTimeout(() => {
-          router.push("/");
-          router.refresh();
+          onUnlock();
         }, 1500);
       } else {
         setHistory(prev => [
@@ -122,15 +126,12 @@ export default function TerminalEntryPage() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden font-mono text-[#00ff41]">
+    <div className={`fixed inset-0 z-[9999] bg-black overflow-hidden font-mono text-[#00ff41] transition-opacity duration-700 ${isFadingOut ? 'opacity-0' : 'opacity-100'}`}>
       
       {/* Animated Wireframe Sphere Background */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-60">
         <div className="relative w-64 h-64 sm:w-96 sm:h-96">
-          {/* Inner solid glowing sphere */}
           <div className="absolute inset-0 rounded-full bg-[#52b144] shadow-[0_0_80px_#52b144] animate-pulse opacity-90" style={{ transform: "scale(0.85)" }}></div>
-          
-          {/* Outer wireframe lines (simulated via rotated borders) */}
           <div className="absolute inset-0 border border-[#00ff41]/40 rounded-full animate-[spin_10s_linear_infinite]" style={{ transform: "rotateX(75deg)" }}></div>
           <div className="absolute inset-0 border border-[#00ff41]/40 rounded-full animate-[spin_15s_linear_infinite_reverse]" style={{ transform: "rotateY(75deg)" }}></div>
           <div className="absolute inset-0 border border-[#00ff41]/40 rounded-full animate-[spin_20s_linear_infinite]" style={{ transform: "rotateZ(45deg) rotateX(45deg)" }}></div>
@@ -140,8 +141,6 @@ export default function TerminalEntryPage() {
 
       {/* Terminal Content */}
       <div className="relative z-10 w-full h-full p-4 sm:p-8 flex flex-col overflow-y-auto custom-scrollbar">
-        
-        {/* Status bar */}
         <div className="absolute top-4 right-8 text-xs opacity-70 tracking-widest hidden sm:block">
           SYS.STATUS: OPTIMAL
         </div>
@@ -165,6 +164,7 @@ export default function TerminalEntryPage() {
               autoFocus
               spellCheck={false}
               autoComplete="off"
+              disabled={isFadingOut}
             />
           </div>
           <div ref={bottomRef} />
