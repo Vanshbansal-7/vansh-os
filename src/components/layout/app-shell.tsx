@@ -16,6 +16,15 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isModulePage = pathname.startsWith("/modules") || pathname === "/companies" || pathname === "/documents" || pathname === "/streak";
+  const isAuthPage = pathname === "/login";
+
+  if (isAuthPage) {
+    return (
+      <div className="min-h-screen bg-black text-[#00ff41] font-mono w-full">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#090A10] text-[#F8FAFC] flex justify-center w-full relative">

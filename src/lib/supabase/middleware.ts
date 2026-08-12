@@ -44,11 +44,9 @@ export async function updateSession(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
 
   if (!isAuthenticated && !isAuthPage && !isStaticFile && !isApiRoute) {
-    // const url = request.nextUrl.clone()
-    // url.pathname = '/login'
-    // return NextResponse.redirect(url)
-    
-    // Auth bypass explicitly requested by user
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
   if (isAuthenticated && isAuthPage) {
