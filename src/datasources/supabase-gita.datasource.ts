@@ -109,14 +109,20 @@ export class SupabaseGitaDatasource {
       const { data: verseData, error: verseError } = await supabase
         .from('gita_verses')
         .select('*')
-        .eq('is_featured', true)
-        .order('display_priority', { ascending: false })
-        .limit(10);
+        .order('id', { ascending: true }); // Ensure stable ordering
 
       if (!verseError && verseData && verseData.length > 0) {
         // Date-seeded index into available verses
-        const dateHash = dateStr.split('-').reduce((acc, part) => acc + parseInt(part, 10), 0);
-        const selected = verseData[dateHash % verseData.length] as GitaVerse;
+        const epochDate = new Date('2024-01-01T00:00:00Z');
+        const targetDate = new Date(`${dateStr}T00:00:00Z`);
+        const daysSinceEpoch = Math.floor((targetDate.getTime() - epochDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Use a prime step (e.g., 997) to pseudo-randomly jump around the array. 
+        // Since 997 is prime and likely larger than the length, it guarantees a full cycle with NO repetition!
+        const step = 997; 
+        const index = (Math.abs(daysSinceEpoch) * step) % verseData.length;
+        
+        const selected = verseData[index] as GitaVerse;
         return { verse: selected, isDailyRotation: true };
       }
     } catch (err) {
@@ -124,8 +130,13 @@ export class SupabaseGitaDatasource {
     }
 
     // 3. Robust authentic fallback guarantee
-    const dateHash = dateStr.split('-').reduce((acc, part) => acc + (parseInt(part, 10) || 1), 0);
-    const selected = AUTHENTIC_GITA_POOL[dateHash % AUTHENTIC_GITA_POOL.length];
+    const epochDate = new Date('2024-01-01T00:00:00Z');
+    const targetDate = new Date(`${dateStr}T00:00:00Z`);
+    const daysSinceEpoch = Math.floor((targetDate.getTime() - epochDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    const step = 997; 
+    const index = (Math.abs(daysSinceEpoch) * step) % AUTHENTIC_GITA_POOL.length;
+    const selected = AUTHENTIC_GITA_POOL[index];
     return { verse: selected, isDailyRotation: true };
   }
 

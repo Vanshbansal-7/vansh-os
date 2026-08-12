@@ -4,11 +4,42 @@ import React from "react";
 import Link from "next/link";
 import { Search, Bell, Flame, ChevronRight } from "lucide-react";
 import { useDashboard } from "@/hooks/use-dashboard";
-import { useStreak } from "@/hooks/use-streak";
+import { useStreakStore, getISTDate, getISTDateString, getTodayIST } from "@/hooks/use-streak-store";
 
 export function TopHeader() {
   const { greeting, userName, currentDateFormatted } = useDashboard();
-  const { currentStreak, weeklyPattern } = useStreak();
+  const { currentStreak, loginDateSet, checkedInToday } = useStreakStore();
+
+  const weeklyPattern = React.useMemo(() => {
+    const today = getISTDate();
+    const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday in IST
+    const diffToMonday = currentDay === 0 ? 6 : currentDay - 1; 
+    
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - diffToMonday);
+    
+    const pattern = [];
+    const dayNames = ["M", "T", "W", "T", "F", "S", "S"];
+    
+    const todayStr = getTodayIST();
+    
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = getISTDateString(d);
+      
+      let status = "pending";
+      if (loginDateSet.has(dateStr)) {
+        status = "completed";
+      } else if (dateStr === todayStr) {
+        status = "active";
+      }
+      
+      pattern.push({ day: dayNames[i], status });
+    }
+    
+    return pattern;
+  }, [loginDateSet]);
 
   return (
     <header className="flex flex-col gap-3 pt-0.5 pb-1">
@@ -66,17 +97,17 @@ export function TopHeader() {
         {/* Live Streak Widget with Chevron Dropdown Navigation to /streak */}
         <Link
           href="/streak"
-          className="flex items-center gap-3.5 px-3.5 py-1.5 rounded-xl bg-[#101320] hover:bg-[#141828] border border-white/[0.08] hover:border-amber-400/40 transition-all shadow-sm group cursor-pointer"
+          className="flex items-center gap-3.5 px-3.5 py-1.5 rounded-xl bg-[#101320] hover:bg-[#141828] border border-white/[0.08] hover:border-purple-500/40 transition-all shadow-sm group cursor-pointer"
         >
           <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 fill-amber-400 text-amber-400 group-hover:scale-110 transition-transform" />
+            <Flame className="w-4 h-4 fill-fuchsia-500 text-fuchsia-500 group-hover:scale-110 transition-transform" />
             <div className="flex flex-col">
               <span className="text-sm font-bold text-white leading-none">
                 {currentStreak}
               </span>
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
                 <span>Day Streak</span>
-                <ChevronRight className="w-3 h-3 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight className="w-3 h-3 text-fuchsia-500 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </div>
           </div>
@@ -85,27 +116,16 @@ export function TopHeader() {
 
           {/* 7-Day Cycle Dots from real streak data */}
           <div className="flex items-center gap-1.5">
-            {(weeklyPattern.length > 0
-              ? weeklyPattern
-              : [
-                  { day: "M", status: "pending" },
-                  { day: "T", status: "pending" },
-                  { day: "W", status: "pending" },
-                  { day: "T", status: "pending" },
-                  { day: "F", status: "pending" },
-                  { day: "S", status: "pending" },
-                  { day: "S", status: "active" },
-                ]
-            ).map((item, idx) => (
+            {weeklyPattern.map((item, idx) => (
               <div key={idx} className="flex flex-col items-center gap-1">
                 <span className="text-[9px] font-bold text-slate-400">{item.day}</span>
                 <div
                   className={`w-3 h-3 rounded-full flex items-center justify-center transition-all ${
                     item.status === "active"
-                      ? "border-2 border-amber-400 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
+                      ? "border-2 border-fuchsia-500 bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.6)]"
                       : item.status === "completed"
-                      ? "bg-white/90"
-                      : "bg-white/20"
+                      ? "bg-purple-500 border border-purple-400"
+                      : "bg-white/[0.05] border border-white/[0.1]"
                   }`}
                 >
                   {item.status === "completed" && (

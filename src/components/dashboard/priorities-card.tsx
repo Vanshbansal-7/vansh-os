@@ -101,8 +101,8 @@ export function PrioritiesCard() {
 
   return (
     <>
-      <div className="rounded-2xl p-5 bg-[#10131E] border border-white/[0.08] shadow-sm flex flex-col justify-between h-full">
-        <div className="flex items-center justify-between mb-4">
+      <div className="rounded-2xl p-5 bg-[#10131E] border border-white/[0.08] shadow-sm flex flex-col h-full max-h-[550px]">
+        <div className="flex items-center justify-between mb-4 shrink-0">
           <h3 className="text-[15px] font-bold text-white tracking-tight">
             Today&apos;s Priorities
           </h3>
@@ -131,7 +131,7 @@ export function PrioritiesCard() {
             compact
           />
         ) : (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5 flex-1 overflow-y-auto no-scrollbar">
             {tasks.map((item: DailyTask) => {
               const Icon = getIcon(item.category);
               const isMenuOpen = activeMenuId === item.id;
@@ -225,7 +225,7 @@ export function PrioritiesCard() {
         )}
 
         {/* Add Priority */}
-        <div className="pt-3 mt-2 flex items-center justify-center">
+        <div className="pt-3 mt-2 shrink-0">
           <button 
             onClick={openAddModal}
             className="w-full py-2 rounded-xl border border-dashed border-white/[0.15] hover:border-purple-500/50 bg-white/[0.02] hover:bg-purple-500/10 text-[13px] font-semibold text-slate-300 hover:text-purple-300 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
