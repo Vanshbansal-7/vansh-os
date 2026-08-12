@@ -52,9 +52,9 @@ export function TimelineCard() {
       <div className="rounded-2xl p-4 bg-[#10131E] border border-white/[0.08] shadow-sm flex flex-col h-full max-h-[400px]">
         
         {/* Header */}
-        <div className="flex items-center justify-between mb-2.5 shrink-0">
+        <div className="flex items-center justify-between mb-4 shrink-0">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-white tracking-tight">
+            <h3 className="text-[15px] font-bold text-white tracking-tight">
               Today&apos;s Timeline
             </h3>
             {activeSession && (
@@ -115,39 +115,39 @@ export function TimelineCard() {
           ) : (
             <>
               {/* Continuous Ruler Line */}
-              <div className="absolute left-[42px] top-2 bottom-3 w-[1.5px] bg-white/[0.08] pointer-events-none" />
+              <div className="absolute left-[45px] top-2 bottom-3 w-[2px] bg-white/[0.08] pointer-events-none" />
 
-              <div className="flex flex-col gap-2 pb-4">
+              <div className="flex flex-col gap-3 pb-4">
                 {entries.map((evt: TimetableEntry, idx) => {
                   const isActive = activeSession?.taskId === evt.id;
                   
                   return (
-                    <div key={evt.id || idx} className={`relative z-10 flex items-center justify-between gap-2.5 text-xs py-1.5 px-2 rounded-xl transition-colors ${isActive ? 'bg-purple-500/5 border border-purple-500/20' : 'hover:bg-white/[0.02]'}`}>
+                    <div key={evt.id || idx} className={`relative z-10 flex items-center justify-between gap-3 text-xs py-2 px-3 rounded-xl transition-all ${isActive ? 'bg-purple-500/10 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'hover:bg-white/[0.04]'}`}>
                       
                       {/* Left: Time & Node */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="w-8 text-[10px] font-mono font-semibold text-slate-400 text-right">
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="w-10 text-[11px] font-mono font-semibold text-slate-400 text-right">
                           {evt.start_time.slice(0, 5)}
                         </span>
                         <div
-                          className={`w-2 h-2 rounded-full border border-[#10131E] shrink-0 ${
+                          className={`w-2.5 h-2.5 rounded-full border border-[#10131E] shrink-0 ${
                             isActive
-                              ? "bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.9)] ring-2 ring-purple-500/40"
+                              ? "bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.9)] ring-2 ring-purple-500/50"
                               : "bg-slate-600"
                           }`}
                         />
                       </div>
 
                       {/* Event Info */}
-                      <div className="flex-1 flex flex-col min-w-0 ml-1">
-                        <span className="text-[9px] text-slate-400 font-medium leading-none">
+                      <div className="flex-1 flex flex-col min-w-0 ml-1.5">
+                        <span className="text-[10px] text-slate-400 font-medium leading-none">
                           {evt.window || `${evt.start_time.slice(0, 5)} – ${evt.end_time.slice(0, 5)}`}
                         </span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className={`font-bold text-[12px] truncate ${isActive ? 'text-purple-300' : 'text-white'}`}>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className={`font-bold text-[13.5px] truncate ${isActive ? 'text-purple-300' : 'text-white'}`}>
                             {evt.title}
                           </span>
-                          <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-semibold border ${getTagColor(evt.category)}`}>
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold border ${getTagColor(evt.category)}`}>
                             {evt.category}
                           </span>
                         </div>
@@ -157,21 +157,21 @@ export function TimelineCard() {
                       <div className="shrink-0 flex items-center gap-2">
                         {isActive ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono font-bold text-emerald-400 w-16 text-right">
+                            <span className="text-[13px] font-mono font-bold text-emerald-400 w-16 text-right drop-shadow-md">
                               {formatTimer(currentElapsed)}
                             </span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5">
                               {activeSession.isPaused ? (
-                                <button onClick={resumeSession} className="p-1.5 rounded-md bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors">
-                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                <button onClick={resumeSession} className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all hover:scale-105">
+                                  <Play className="w-4 h-4 fill-current" />
                                 </button>
                               ) : (
-                                <button onClick={pauseSession} className="p-1.5 rounded-md bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors">
-                                  <Pause className="w-3.5 h-3.5 fill-current" />
+                                <button onClick={pauseSession} className="p-2 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-all hover:scale-105">
+                                  <Pause className="w-4 h-4 fill-current" />
                                 </button>
                               )}
-                              <button onClick={endSession} className="p-1.5 rounded-md bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors">
-                                <Square className="w-3.5 h-3.5 fill-current" />
+                              <button onClick={endSession} className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all hover:scale-105">
+                                <Square className="w-4 h-4 fill-current" />
                               </button>
                             </div>
                           </div>
@@ -180,7 +180,7 @@ export function TimelineCard() {
                             onClick={() => startSession(evt.id, evt.title)}
                             className="p-1.5 rounded-md bg-white/5 text-slate-400 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors"
                           >
-                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <Play className="w-4 h-4 fill-current" />
                           </button>
                         )}
                       </div>
