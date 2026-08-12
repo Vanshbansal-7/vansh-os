@@ -118,9 +118,9 @@ export class SupabaseGitaDatasource {
         const daysSinceEpoch = Math.floor((targetDate.getTime() - epochDate.getTime()) / (1000 * 60 * 60 * 24));
         
         // Use a prime step (e.g., 997) to pseudo-randomly jump around the array. 
-        // Since 997 is prime and likely larger than the length, it guarantees a full cycle with NO repetition!
+        // We add an arbitrary offset of 42 so today doesn't coincidentally land on index 0.
         const step = 997; 
-        const index = (Math.abs(daysSinceEpoch) * step) % verseData.length;
+        const index = ((Math.abs(daysSinceEpoch) + 42) * step) % verseData.length;
         
         const selected = verseData[index] as GitaVerse;
         return { verse: selected, isDailyRotation: true };
@@ -135,7 +135,7 @@ export class SupabaseGitaDatasource {
     const daysSinceEpoch = Math.floor((targetDate.getTime() - epochDate.getTime()) / (1000 * 60 * 60 * 24));
     
     const step = 997; 
-    const index = (Math.abs(daysSinceEpoch) * step) % AUTHENTIC_GITA_POOL.length;
+    const index = ((Math.abs(daysSinceEpoch) + 42) * step) % AUTHENTIC_GITA_POOL.length;
     const selected = AUTHENTIC_GITA_POOL[index];
     return { verse: selected, isDailyRotation: true };
   }
