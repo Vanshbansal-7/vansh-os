@@ -37,7 +37,6 @@ export function CompanyCard({ company }: { company: any }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to remove ${company.name}?`)) return;
     setLoading(true);
     try {
       await deleteCompanyAction(company.id);

@@ -41,8 +41,9 @@ export async function updateSession(request: NextRequest) {
   // Protect all engine routes. Ignore auth pages, API routes, and static assets.
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth')
   const isStaticFile = request.nextUrl.pathname.startsWith('/_next') || request.nextUrl.pathname.startsWith('/favicon')
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
 
-  if (!isAuthenticated && !isAuthPage && !isStaticFile) {
+  if (!isAuthenticated && !isAuthPage && !isStaticFile && !isApiRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

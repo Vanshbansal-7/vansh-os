@@ -28,7 +28,6 @@ export function SessionItem({ session }: { session: any }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to remove this session?")) return;
     setLoading(true);
     try {
       await deleteSessionAction(session.id);

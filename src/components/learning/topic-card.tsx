@@ -42,7 +42,6 @@ export function TopicCard({ topic }: { topic: any }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${topic.title}"?`)) return;
     setLoading(true);
     try {
       await deleteLearningTopicAction(topic.id);

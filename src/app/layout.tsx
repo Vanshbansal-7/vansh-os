@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/layout/app-shell";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -12,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Vansh OS",
-  description: "Personal Operating System",
+  title: "VOS — Vansh Operating System",
+  description: "Personal Founder Operating System",
 };
 
 export default function RootLayout({
@@ -22,33 +19,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${inter.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TooltipProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <header className="flex h-14 items-center gap-4 border-b bg-background px-6 lg:h-[60px]">
-                  <SidebarTrigger />
-                  <div className="flex-1" />
-                </header>
-                <main className="flex-1 overflow-auto bg-secondary/30 p-4 md:p-8">
-                  {children}
-                </main>
-              </div>
-            </SidebarProvider>
-          </TooltipProvider>
-        </ThemeProvider>
+    <html lang="en" className={`${inter.variable} dark h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full bg-[#090A10] text-[#F8FAFC]">
+        <AppShell>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -8,7 +7,6 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
   
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -38,81 +36,113 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
 }
 
 :root {
-  /* Light Mode */
-  --background: #FFFFFF;
-  --foreground: #0F172A; /* Slate 900 */
+  --background: #090A10;
+  --foreground: #F8FAFC;
   
-  --card: #FFFFFF;
-  --card-foreground: #0F172A;
-  
-  --popover: #FFFFFF;
-  --popover-foreground: #0F172A;
-  
-  --primary: #1E3A8A; /* Navy Blue */
-  --primary-foreground: #FFFFFF;
-  
-  --secondary: #F8FAFC; /* Slate 50 */
-  --secondary-foreground: #0F172A;
-  
-  --muted: #F1F5F9; /* Slate 100 */
-  --muted-foreground: #64748B; /* Slate 500 */
-  
-  --accent: #F1F5F9;
-  --accent-foreground: #0F172A;
-  
-  --destructive: #EF4444; /* Red 500 */
-  --destructive-foreground: #FFFFFF;
-  
-  --border: #E2E8F0; /* Slate 200 */
-  --input: #E2E8F0;
-  --ring: #1E3A8A;
-  
-  --radius: 12px;
-}
-
-.dark {
-  /* Dark Mode */
-  --background: #0B1120; /* Deep Navy */
-  --foreground: #F8FAFC; /* Slate 50 */
-  
-  --card: #1E293B; /* Dark Slate */
+  --card: #10131E;
   --card-foreground: #F8FAFC;
   
-  --popover: #1E293B;
+  --popover: #10131E;
   --popover-foreground: #F8FAFC;
   
-  --primary: #3B82F6; /* Brighter Blue for Dark Mode */
+  --primary: #8B5CF6; /* Purple-500 */
   --primary-foreground: #FFFFFF;
   
-  --secondary: #0F172A;
-  --secondary-foreground: #F8FAFC;
+  --secondary: #161A26;
+  --secondary-foreground: #E2E8F0;
   
-  --muted: #0F172A;
+  --muted: #131722;
   --muted-foreground: #94A3B8;
   
-  --accent: #0F172A;
-  --accent-foreground: #F8FAFC;
+  --accent: #8B5CF6;
+  --accent-foreground: #FFFFFF;
   
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   
-  --border: #334155; /* Soft Gray/Blue */
-  --input: #334155;
-  --ring: #3B82F6;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #8B5CF6;
+  
+  --radius: 16px;
+}
+
+.dark {
+  --background: #090A10;
+  --foreground: #F8FAFC;
+  --card: #10131E;
+  --card-foreground: #F8FAFC;
+  --popover: #10131E;
+  --popover-foreground: #F8FAFC;
+  --primary: #8B5CF6;
+  --primary-foreground: #FFFFFF;
+  --secondary: #161A26;
+  --secondary-foreground: #E2E8F0;
+  --muted: #131722;
+  --muted-foreground: #94A3B8;
+  --accent: #8B5CF6;
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #8B5CF6;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: #090A10;
+    color: #F8FAFC;
+    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
-  html {
-    @apply font-sans;
-  }
+}
+
+/* Custom Sleek Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090A10;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E2333;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2D354D;
+}
+
+/* Custom Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(16, 19, 30, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-hover:hover {
+  border-color: rgba(139, 92, 246, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px -3px rgba(139, 92, 246, 0.15);
+}
+
+.glow-purple {
+  box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.35);
+}
+
+.glow-pill {
+  box-shadow: 0 0 15px -2px rgba(139, 92, 246, 0.4);
 }

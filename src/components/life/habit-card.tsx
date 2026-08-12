@@ -20,7 +20,6 @@ export function HabitCard({ habit }: { habit: any }) {
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Delete habit "${habit.title}"?`)) return;
     setLoading(true);
     try {
       await deleteHabitAction(habit.id);
