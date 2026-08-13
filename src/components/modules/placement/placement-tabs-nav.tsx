@@ -16,8 +16,8 @@ export function PlacementTabsNav({ activeTab, onTabChange }: PlacementTabsNavPro
   ];
 
   return (
-    <div className="w-full border-b border-white/[0.08] mb-4">
-      <div className="flex items-center justify-center gap-8 max-w-md mx-auto">
+    <div className="w-full mb-6 mt-2 flex justify-center">
+      <div className="flex items-center p-1 bg-[#10131E] border border-white/[0.08] rounded-2xl shadow-sm">
         {tabs.map((t) => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
@@ -25,15 +25,14 @@ export function PlacementTabsNav({ activeTab, onTabChange }: PlacementTabsNavPro
             <button
               key={t.id}
               onClick={() => onTabChange(t.id)}
-              className={`flex items-center gap-2 py-2.5 text-xs font-bold transition-all relative cursor-pointer ${
-                isActive ? "text-purple-300" : "text-slate-400 hover:text-slate-200"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 relative cursor-pointer ${
+                isActive 
+                  ? "text-white bg-purple-600 shadow-[0_4px_16px_-4px_rgba(147,51,234,0.5)]" 
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]"
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-purple-400" : "text-slate-400"}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-purple-100" : "text-slate-400"}`} />
               <span>{t.label}</span>
-              {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
-              )}
             </button>
           );
         })}

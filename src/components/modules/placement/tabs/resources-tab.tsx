@@ -12,6 +12,11 @@ export function ResourcesTab() {
     filteredResources,
     searchQuery,
     setSearchQuery,
+    categories,
+    activeCategory,
+    setActiveCategory,
+    activePriority,
+    setActivePriority,
     addResource,
     deleteResource,
   } = usePlacementResources();
@@ -60,63 +65,108 @@ export function ResourcesTab() {
       ) : (
         <div className="flex flex-col gap-4">
           {/* Toolbar */}
-          <div className="flex items-center justify-between gap-3 p-2 rounded-2xl bg-[#10131E] border border-white/[0.08]">
-            <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-[#10131E] border border-white/[0.08]">
+            {/* Search */}
+            <div className="relative w-full sm:w-[320px]">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search resources..."
-                className="w-full bg-[#151828] border border-white/[0.06] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+                placeholder="Search resources, tags, URLs..."
+                className="w-full bg-[#151828] border border-white/[0.06] focus:border-purple-500/40 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
               />
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <select
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                className="bg-[#151828] border border-white/[0.06] text-xs text-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500/40 cursor-pointer flex-1 sm:flex-none appearance-none"
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c === "ALL" ? "All Categories" : c}</option>
+                ))}
+              </select>
+
+              <select
+                value={activePriority}
+                onChange={(e) => setActivePriority(e.target.value)}
+                className="bg-[#151828] border border-white/[0.06] text-xs text-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500/40 cursor-pointer flex-1 sm:flex-none appearance-none"
+              >
+                <option value="ALL">All Priorities</option>
+                <option value="HIGH">High Priority</option>
+                <option value="MEDIUM">Medium Priority</option>
+                <option value="LOW">Low Priority</option>
+              </select>
             </div>
           </div>
 
-          {/* Grid of Resource Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {/* List of Resource Rows */}
+          <div className="flex flex-col gap-2.5">
             {filteredResources.map((res) => (
               <div
                 key={res.id}
-                className="p-4 rounded-2xl bg-[#10131E] border border-white/[0.08] hover:border-purple-500/30 transition-all flex flex-col justify-between gap-3 group"
+                className="p-3.5 rounded-xl bg-[#10131E] border border-white/[0.08] hover:border-purple-500/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400">
-                      <Globe className="w-4 h-4" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <h4 className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors">
-                        {res.title}
-                      </h4>
-                      <span className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
-                        {res.display_url}
-                      </span>
+                {/* Left: Icon & Info */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400 shrink-0">
+                    <Globe className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <h4 className="text-sm font-bold text-white truncate group-hover:text-purple-300 transition-colors">
+                      {res.title}
+                    </h4>
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400 font-medium">
+                      <span className="truncate max-w-[200px] sm:max-w-[300px]">{res.display_url}</span>
+                      {res.tags && res.tags.length > 0 && (
+                        <>
+                          <span className="text-slate-600">•</span>
+                          <span className="truncate flex gap-1.5">
+                            {res.tags.map((t, i) => (
+                              <span key={i} className="text-slate-500">#{t}</span>
+                            ))}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => deleteResource(res.id)}
-                    className="p-1 rounded text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-white/[0.04]">
-                  <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-[10px] font-bold text-purple-300">
-                    {res.category}
-                  </span>
-                  <a
-                    href={res.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 text-[11px] font-bold text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    <span>Open</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                {/* Right: Badges & Actions */}
+                <div className="flex items-center gap-4 shrink-0 pl-14 sm:pl-0">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-white/[0.04] text-[10px] font-bold text-slate-300 border border-white/[0.08]">
+                      {res.category}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      res.priority === "HIGH" ? "bg-rose-500/15 text-rose-300 border-rose-500/30" :
+                      res.priority === "MEDIUM" ? "bg-amber-500/15 text-amber-300 border-amber-500/30" :
+                      "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                    }`}>
+                      {res.priority}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <a
+                      href={res.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1.5 rounded-lg text-purple-400 hover:bg-purple-500/15 transition-all"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => deleteResource(res.id)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

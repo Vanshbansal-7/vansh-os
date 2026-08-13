@@ -98,14 +98,22 @@ export function AddSubjectModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-300">Description</label>
-            <textarea
-              rows={3}
+            <label className="text-xs font-bold text-slate-300">Folder / Category</label>
+            <input
+              type="text"
+              list="folder-options"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional overview of the subject roadmap..."
-              className="w-full bg-[#151828] border border-white/[0.08] focus:border-purple-500/50 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-all font-medium resize-none"
+              placeholder="e.g. DSA, CORE, Aptitude..."
+              className="w-full bg-[#151828] border border-white/[0.08] focus:border-purple-500/50 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-all font-medium"
             />
+            <datalist id="folder-options">
+              <option value="DSA" />
+              <option value="CORE" />
+              <option value="Aptitude" />
+              <option value="Development" />
+              <option value="General" />
+            </datalist>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
