@@ -58,3 +58,33 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  const requestId = crypto.randomUUID();
+  logger.info("Handling PATCH /api/v1/resources", { requestId });
+
+  try {
+    const body = await req.json();
+    const { id, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: { message: "Resource ID is required", code: "MISSING_ID" } },
+        { status: 400 }
+      );
+    }
+
+    const updatedResource = await resourcesRepository.update(id, updates);
+    return NextResponse.json({
+      success: true,
+      data: updatedResource,
+      meta: { generated_at: new Date().toISOString() },
+    });
+  } catch (err: any) {
+    logger.error("PATCH /api/v1/resources failed", { requestId, err });
+    return NextResponse.json(
+      { success: false, error: { message: err.message || "Failed to update resource", code: "UPDATE_ERROR" } },
+      { status: 500 }
+    );
+  }
+}

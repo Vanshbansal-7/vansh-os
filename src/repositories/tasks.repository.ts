@@ -9,6 +9,18 @@ export class TasksRepository {
   async toggleComplete(taskId: string, userId: string, completed: boolean): Promise<boolean> {
     return supabaseTasksDatasource.toggleTaskComplete(taskId, userId, completed);
   }
+
+  async createTask(task: Partial<DailyTask>, userId: string): Promise<DailyTask | null> {
+    return supabaseTasksDatasource.createTask(task, userId);
+  }
+
+  async editTask(taskId: string, userId: string, updates: Partial<DailyTask>): Promise<boolean> {
+    return supabaseTasksDatasource.editTask(taskId, userId, updates);
+  }
+
+  async deleteTask(taskId: string, userId: string): Promise<boolean> {
+    return supabaseTasksDatasource.deleteTask(taskId, userId);
+  }
 }
 
 export const tasksRepository = new TasksRepository();

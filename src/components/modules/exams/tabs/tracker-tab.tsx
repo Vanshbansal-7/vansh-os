@@ -45,26 +45,7 @@ export function TrackerTab({ examSlug, examName, examId }: TrackerTabProps) {
         }}
       />
 
-      {/* Tracker Top Header Row */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h2 className="text-base font-bold text-white tracking-tight leading-none">
-            {examName} Tracker
-          </h2>
-          <p className="text-[11.5px] text-slate-400 font-medium mt-1">
-            Track all your {examName} preparation subjects and topics
-          </p>
-        </div>
 
-        <button
-          type="button"
-          onClick={() => setIsAddSubjectModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-bold transition-all cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>+ Create Subject</span>
-        </button>
-      </div>
 
       {subjects.length === 0 ? (
         <EmptyState

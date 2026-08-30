@@ -27,3 +27,20 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ success: false, error: { message: 'Unauthorized' } }, { status: 401 });
+
+    const entry = await timetableService.createEntry(body, user.id);
+    if (!entry) throw new Error("Failed to create timeline entry");
+
+    return NextResponse.json({ success: true, data: entry });
+  } catch (err) {
+    logger.error('POST /api/v1/timeline failed', { err });
+    return NextResponse.json({ success: false, error: { message: 'Failed to create timeline entry' } }, { status: 500 });
+  }
+}

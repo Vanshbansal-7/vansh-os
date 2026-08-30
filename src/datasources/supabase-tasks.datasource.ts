@@ -67,6 +67,64 @@ export class SupabaseTasksDatasource {
     }
     return false;
   }
+
+  async createTask(task: Partial<DailyTask>, userId: string): Promise<DailyTask | null> {
+    try {
+      const supabase = await createClient();
+      const newTask = {
+        ...task,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { data, error } = await supabase
+        .from('daily_tasks')
+        .insert([newTask])
+        .select()
+        .single();
+        
+      if (!error && data) return data as DailyTask;
+      logger.error('Failed to create task', { error });
+    } catch (err) {
+      logger.error('Create task exception', { err });
+    }
+    return null;
+  }
+
+  async editTask(taskId: string, userId: string, updates: Partial<DailyTask>): Promise<boolean> {
+    try {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from('daily_tasks')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', taskId)
+        .eq('user_id', userId);
+
+      if (!error) return true;
+      logger.error('Failed to edit task', { taskId, error });
+    } catch (err) {
+      logger.error('Edit task exception', { err });
+    }
+    return false;
+  }
+
+  async deleteTask(taskId: string, userId: string): Promise<boolean> {
+    try {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from('daily_tasks')
+        .delete()
+        .eq('id', taskId)
+        .eq('user_id', userId);
+
+      if (!error) return true;
+      logger.error('Failed to delete task', { taskId, error });
+    } catch (err) {
+      logger.error('Delete task exception', { err });
+    }
+    return false;
+  }
 }
 
 export const supabaseTasksDatasource = new SupabaseTasksDatasource();

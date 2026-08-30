@@ -1,97 +1,99 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
+import { useCallback } from "react";
 
 export interface TemplateBlock {
   id: string;
   time: string; // e.g. "09:00 - 11:00"
   title: string;
+  day?: string;
+  order_index?: number;
 }
 
 export type DayOfWeek = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
-const SEED_TEMPLATE: Record<DayOfWeek, TemplateBlock[]> = {
-  Mon: [
-    { id: "mon-1", time: "07:00 - 08:00", title: "Wake Up & Fresh" },
-    { id: "mon-2", time: "08:00 - 09:30", title: "DSA – Graphs & DP" },
-    { id: "mon-3", time: "09:30 - 10:00", title: "Break" },
-    { id: "mon-4", time: "10:00 - 11:30", title: "Core Subjects – OS" },
-    { id: "mon-5", time: "12:00 - 13:00", title: "Apply to 2 Companies" },
-    { id: "mon-6", time: "13:00 - 14:00", title: "Lunch & Rest" },
-    { id: "mon-7", time: "14:00 - 15:00", title: "SSC CGL – Quant Practice" },
-    { id: "mon-8", time: "15:00 - 16:30", title: "DBMS Revision & Practice" },
-    { id: "mon-9", time: "17:00 - 19:00", title: "Defense Prep – Navy" },
-    { id: "mon-10", time: "19:00 - 20:00", title: "Football Training" },
-    { id: "mon-11", time: "20:00 - 21:00", title: "Dinner & Family" },
-    { id: "mon-12", time: "21:00 - 22:00", title: "Read + Journal" },
-    { id: "mon-13", time: "22:00 - 22:30", title: "Plan Tomorrow" },
-  ],
-  Tue: [],
-  Wed: [],
-  Thu: [],
-  Fri: [],
-  Sat: [],
-  Sun: [],
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch timetable blocks");
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message);
+
+  // Group by day
+  const grouped: Record<DayOfWeek, TemplateBlock[]> = {
+    Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: []
+  };
+
+  (json.data || []).forEach((block: any) => {
+    if (block.day && grouped[block.day as DayOfWeek]) {
+      grouped[block.day as DayOfWeek].push({
+        id: block.id,
+        time: block.time,
+        title: block.title,
+        day: block.day,
+        order_index: block.order_index,
+      });
+    }
+  });
+
+  return grouped;
 };
 
-// Fill empty seed days with Monday's template for convenience
-(["Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as DayOfWeek[]).forEach((day) => {
-  SEED_TEMPLATE[day] = SEED_TEMPLATE.Mon.map(block => ({ ...block, id: `${day.toLowerCase()}-${block.id.split('-')[1]}` }));
-});
-
 export function useTimetableTemplate() {
-  const [templates, setTemplates] = useState<Record<DayOfWeek, TemplateBlock[]>>({} as any);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { data, error, isLoading, mutate } = useSWR<Record<DayOfWeek, TemplateBlock[]>>(
+    "/api/v1/timetable",
+    fetcher,
+    { revalidateOnFocus: true }
+  );
 
-  useEffect(() => {
-    const stored = localStorage.getItem("vos_timetable_templates");
-    if (stored) {
-      setTemplates(JSON.parse(stored));
-    } else {
-      setTemplates(SEED_TEMPLATE);
-      localStorage.setItem("vos_timetable_templates", JSON.stringify(SEED_TEMPLATE));
-    }
-    setIsLoaded(true);
-  }, []);
+  const templates = data || {
+    Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: []
+  };
 
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("vos_timetable_templates", JSON.stringify(templates));
-    }
-  }, [templates, isLoaded]);
+  const addBlock = async (day: DayOfWeek, block: Omit<TemplateBlock, "id">) => {
+    const currentList = templates[day] || [];
+    const res = await fetch("/api/v1/timetable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...block, day, order_index: currentList.length }),
+    });
+    if (res.ok) mutate();
+  };
 
-  const addBlock = useCallback((day: DayOfWeek, block: Omit<TemplateBlock, "id">) => {
-    const newBlock: TemplateBlock = { ...block, id: crypto.randomUUID() };
-    setTemplates((prev) => ({
-      ...prev,
-      [day]: [...(prev[day] || []), newBlock],
-    }));
-  }, []);
+  const editBlock = async (day: DayOfWeek, id: string, updates: Partial<TemplateBlock>) => {
+    const res = await fetch("/api/v1/timetable", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    });
+    if (res.ok) mutate();
+  };
 
-  const editBlock = useCallback((day: DayOfWeek, id: string, updates: Partial<TemplateBlock>) => {
-    setTemplates((prev) => ({
-      ...prev,
-      [day]: prev[day].map((b) => (b.id === id ? { ...b, ...updates } : b)),
-    }));
-  }, []);
+  const deleteBlock = async (day: DayOfWeek, id: string) => {
+    const res = await fetch(`/api/v1/timetable?id=${id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) mutate();
+  };
 
-  const deleteBlock = useCallback((day: DayOfWeek, id: string) => {
-    setTemplates((prev) => ({
-      ...prev,
-      [day]: prev[day].filter((b) => b.id !== id),
-    }));
-  }, []);
-
-  const reorderBlocks = useCallback((day: DayOfWeek, newOrder: TemplateBlock[]) => {
-    setTemplates((prev) => ({
-      ...prev,
-      [day]: newOrder,
-    }));
-  }, []);
+  const reorderBlocks = async (day: DayOfWeek, newOrder: TemplateBlock[]) => {
+    // In a real app we'd send a bulk update.
+    // For now, we'll just optimistically update local state.
+    mutate({ ...templates, [day]: newOrder }, false);
+    
+    // We could dispatch PATCH requests for all items to update order_index
+    Promise.all(newOrder.map((b, idx) => 
+      fetch("/api/v1/timetable", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: b.id, order_index: idx }),
+      })
+    )).then(() => mutate());
+  };
 
   return {
     templates,
-    isLoading: !isLoaded,
+    isLoading: isLoading && !data,
     addBlock,
     editBlock,
     deleteBlock,

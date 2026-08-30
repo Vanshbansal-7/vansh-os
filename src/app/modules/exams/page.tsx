@@ -128,7 +128,7 @@ export default function ExamsLauncherPage() {
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0 shadow-[0_0_14px_rgba(168,85,247,0.4)]"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Register New Exam</span>
+          <span>Register New Exam</span>
         </button>
       </div>
 
@@ -143,7 +143,7 @@ export default function ExamsLauncherPage() {
         <EmptyState
           title="No competitive exams registered yet"
           description="Register your target competitive exams (AFCAT, CDS, SSC CGL, GATE, UPSC) to unlock your preparation workspace, syllabus tracker, resources, and milestone tracker."
-          actionLabel="+ Register Your First Exam"
+          actionLabel="Register Your First Exam"
           onAction={() => setIsRegisterOpen(true)}
           icon="general"
         />

@@ -166,7 +166,7 @@ export function useYouTubeModule() {
 
   const deleteVaultAsset = async (id: string) => {
     try {
-      const res = await fetch(`/api/v1/resources/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/resources?id=${id}`, { method: "DELETE" });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error?.message || "Failed to delete vault asset");
@@ -174,6 +174,24 @@ export function useYouTubeModule() {
       await mutate();
     } catch (err) {
       console.error("[useYouTubeModule] error deleting vault asset:", err);
+      throw err;
+    }
+  };
+
+  const updateVaultAsset = async (id: string, updates: any) => {
+    try {
+      const res = await fetch(`/api/v1/resources`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error?.message || "Failed to update vault asset");
+      }
+      await mutate();
+    } catch (err) {
+      console.error("[useYouTubeModule] error updating vault asset:", err);
       throw err;
     }
   };
@@ -209,6 +227,7 @@ export function useYouTubeModule() {
     deleteVideoTask,
     addVaultAsset,
     deleteVaultAsset,
+    updateVaultAsset,
     toggleVaultAssetFavorite,
     isLoading: isLoading && !data,
     error,

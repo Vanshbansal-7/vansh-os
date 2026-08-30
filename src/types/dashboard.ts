@@ -27,6 +27,7 @@ export interface DailyTask {
   priority_level: PriorityLevel;
   completed: boolean;
   completed_at?: string;
+  deadline?: string;
   due_date: string;
   due_time?: string;
   source: string;

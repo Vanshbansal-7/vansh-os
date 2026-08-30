@@ -37,12 +37,18 @@ export function useExamTracker(moduleSlug: string, examId?: string) {
         title: t.title || t.name || "Untitled Topic",
       }));
 
+      let fullyCompletedTopics = 0;
       let completedMilestones = 0;
+
       topicList.forEach((t: any) => {
-        if (t.is_learned) completedMilestones++;
-        if (t.is_practiced) completedMilestones++;
-        if (t.is_revised) completedMilestones++;
-        if (t.is_mastered) completedMilestones++;
+        let currentMilestones = 0;
+        if (t.is_learned) currentMilestones++;
+        if (t.is_practiced) currentMilestones++;
+        if (t.is_revised) currentMilestones++;
+        if (t.is_mastered) currentMilestones++;
+
+        completedMilestones += currentMilestones;
+        if (currentMilestones === 4) fullyCompletedTopics++;
       });
 
       const totalPossible = topicList.length * 4;
@@ -51,8 +57,10 @@ export function useExamTracker(moduleSlug: string, examId?: string) {
       return {
         ...s,
         title: s.title || s.name || "Untitled Subject",
+        folder: s.description?.trim() || "Uncategorized",
         topics: topicList,
         completedMilestones,
+        fullyCompletedTopics,
         totalPossibleMilestones: totalPossible,
         progress,
       };
@@ -61,16 +69,18 @@ export function useExamTracker(moduleSlug: string, examId?: string) {
 
   const stats = useMemo(() => {
     let totalTopics = 0;
+    let totalCompletedTopics = 0;
     let totalCompletedMilestones = 0;
 
     subjects.forEach((subj: any) => {
       totalTopics += subj.topics?.length || 0;
+      totalCompletedTopics += subj.fullyCompletedTopics || 0;
       totalCompletedMilestones += subj.completedMilestones || 0;
     });
 
     const totalPossibleMilestones = totalTopics * 4;
     const progress = totalPossibleMilestones > 0 ? Math.round((totalCompletedMilestones / totalPossibleMilestones) * 100) : 0;
-    return { totalTopics, completedTopics: totalCompletedMilestones, progress };
+    return { totalTopics, completedTopics: totalCompletedTopics, progress };
   }, [subjects]);
 
   const selectedSubject = useMemo(() => {

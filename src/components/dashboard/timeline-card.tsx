@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Pause, Square, MoreVertical, Sheet } from "lucide-react";
+import { Play, Pause, Square, MoreVertical, Sheet, Plus } from "lucide-react";
 import { useTimeline } from "@/hooks/use-timeline";
 import { WidgetState } from "@/components/shared/widget-state";
 import { TimetableEntry } from "@/types/dashboard";
 import { useTimeTracker } from "@/hooks/use-time-tracker";
 import { TimeSheetModal } from "./time-sheet-modal";
+import { TimelineEntryModal } from "./timeline-entry-modal";
 
 const CATEGORY_COLORS: Record<string, string> = {
   "Deep Work":   "bg-purple-500/20 text-purple-300 border-purple-400/30",
@@ -32,7 +33,7 @@ function formatTimer(seconds: number) {
 }
 
 export function TimelineCard() {
-  const { entries, isLoading, error, refresh } = useTimeline();
+  const { entries, isLoading, error, refresh, addEntry } = useTimeline();
   const { 
     logs, 
     activeSession, 
@@ -46,6 +47,13 @@ export function TimelineCard() {
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleAddEntry = (entry: Omit<TimetableEntry, "id" | "user_id" | "status" | "elapsed" | "window">) => {
+    if (addEntry) {
+      addEntry(entry);
+    }
+  };
 
   return (
     <>
@@ -65,7 +73,14 @@ export function TimelineCard() {
             )}
           </div>
           
-          <div className="relative">
+          <div className="flex items-center gap-2 relative">
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="p-1 rounded-lg hover:bg-white/5 text-purple-400 transition-colors"
+              title="Add Timeline Entry"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-1 rounded-lg hover:bg-white/5 text-slate-400 transition-colors"
@@ -201,6 +216,11 @@ export function TimelineCard() {
         onClose={() => setIsSheetOpen(false)} 
         logs={logs}
         onClear={clearLogs}
+      />
+      <TimelineEntryModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={handleAddEntry}
       />
     </>
   );

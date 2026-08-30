@@ -24,11 +24,23 @@ export function useTimeline() {
     }
   );
 
+  const addEntry = async (entry: Omit<TimetableEntry, "id" | "user_id" | "status" | "elapsed" | "window">) => {
+    const res = await fetch("/api/v1/timeline", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    });
+    if (res.ok) {
+      mutate();
+    }
+  };
+
   return {
     entries: data || [],
     isLoading: isLoading && !data,
     isValidating,
     error,
     refresh: () => mutate(),
+    addEntry,
   };
 }

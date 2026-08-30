@@ -170,6 +170,7 @@ export class YouTubeRepository {
           size: metaObj.size || 'Unknown Size',
           date_added: new Date(r.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
           is_favorite: r.priority === 'HIGH',
+          description: r.description || '',
         };
       });
     } catch (_) {

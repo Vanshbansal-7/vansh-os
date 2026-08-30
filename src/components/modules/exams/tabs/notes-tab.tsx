@@ -1,26 +1,42 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  LayoutTemplate,
   Plus,
   Search,
-  Grid,
-  List,
   Pin,
   FileText,
   Clock,
   MoreVertical,
   Trash2,
-  AlertCircle,
+  FolderOpen,
 } from "lucide-react";
 import { useExamNotes } from "@/hooks/use-exam-notes";
-import { Pagination } from "@/components/modules/cgl/shared/pagination";
+import { CGLNote } from "@/types/cgl";
+import { RichTextEditor } from "../shared/rich-text-editor";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface NotesTabProps {
   examSlug: string;
   examId?: string;
 }
+
+const getDocColor = (folder: string) => {
+  switch (folder) {
+    case "Strategy & Planning":
+      return "text-amber-400 bg-amber-400/10 border-amber-400/20";
+    case "Reasoning":
+      return "text-purple-400 bg-purple-400/10 border-purple-400/20";
+    case "Maths":
+      return "text-blue-400 bg-blue-400/10 border-blue-400/20";
+    case "English":
+      return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
+    case "GK & Current Affairs":
+      return "text-orange-400 bg-orange-400/10 border-orange-400/20";
+    default:
+      return "text-purple-400 bg-purple-400/10 border-purple-400/20";
+  }
+};
 
 export function NotesTab({ examSlug, examId }: NotesTabProps) {
   const {
@@ -29,333 +45,282 @@ export function NotesTab({ examSlug, examId }: NotesTabProps) {
     setSearchQuery,
     selectedFolder,
     setSelectedFolder,
-    selectedTag,
-    setSelectedTag,
-    selectedType,
-    setSelectedType,
-    selectedSort,
-    setSelectedSort,
-    viewMode,
-    setViewMode,
-    currentPage,
-    setCurrentPage,
     addNote,
+    updateNote,
     deleteNote,
     togglePin,
+    foldersCount,
   } = useExamNotes(examSlug, examId);
 
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [isAddingNote, setIsAddingNote] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newContent, setNewContent] = useState("");
-  const [addError, setAddError] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const handleAddNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAddError("");
-    if (!newTitle.trim()) { setAddError("Title is required"); return; }
+  // Editor states
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editFolder, setEditFolder] = useState("General");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const activeNote = notes.find((n) => n.id === activeNoteId);
+
+  // Sync editor when active note changes
+  useEffect(() => {
+    if (activeNote && !isAddingNote) {
+      setEditTitle(activeNote.title || "");
+      setEditContent(activeNote.content || activeNote.description || "");
+      setEditFolder(activeNote.folder || "General");
+    }
+  }, [activeNote, isAddingNote]);
+
+  const handleCreateNew = () => {
+    setActiveNoteId(null);
+    setIsAddingNote(true);
+    setEditTitle("");
+    setEditContent("");
+    setEditFolder(selectedFolder !== "All" ? selectedFolder : "General");
+  };
+
+  const handleSaveNote = async () => {
+    if (!editTitle.trim() && !editContent.trim()) return;
+    setIsSaving(true);
     try {
-      await addNote({ title: newTitle.trim(), content: newContent.trim(), category: selectedFolder !== "All" ? selectedFolder : "General" });
-      setNewTitle("");
-      setNewContent("");
-      setIsAddingNote(false);
-    } catch (err: any) {
-      setAddError(err?.message || "Failed to create note");
+      if (isAddingNote) {
+        const newNote = await addNote({
+          title: editTitle.trim() || "Untitled Note",
+          content: editContent,
+          description: editContent.substring(0, 200).replace(/<[^>]*>?/gm, ''), // Stripped text for snippet
+          folder: editFolder,
+        });
+        setIsAddingNote(false);
+        if (newNote?.id) setActiveNoteId(newNote.id);
+      } else if (activeNoteId) {
+        await updateNote(activeNoteId, {
+          title: editTitle.trim() || "Untitled Note",
+          content: editContent,
+          description: editContent.substring(0, 200).replace(/<[^>]*>?/gm, ''),
+          folder: editFolder,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const getDocColor = (folder: string) => {
-    switch (folder) {
-      case "Strategy & Planning":
-        return "text-purple-400 bg-purple-500/15 border-purple-500/25";
-      case "Reasoning":
-        return "text-amber-400 bg-amber-500/15 border-amber-500/25";
-      case "English":
-        return "text-emerald-400 bg-emerald-500/15 border-emerald-500/25";
-      case "GK & Current Affairs":
-        return "text-rose-400 bg-rose-500/15 border-rose-500/25";
-      case "Maths":
-        return "text-sky-400 bg-sky-500/15 border-sky-500/25";
-      default:
-        return "text-purple-400 bg-purple-500/15 border-purple-500/25";
-    }
-  };
-
-  const ITEMS_PER_PAGE = 10;
-  const totalPages = Math.max(1, Math.ceil(notes.length / ITEMS_PER_PAGE));
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleGlobalClick = () => setOpenMenuId(null);
+    window.addEventListener("click", handleGlobalClick);
+    return () => window.removeEventListener("click", handleGlobalClick);
+  }, []);
 
   return (
-    <div className="flex flex-col w-full mt-4">
-      {/* Center Main Workspace */}
-      <div className="flex flex-col gap-3 min-w-0 w-full">
-        {/* 1. Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-white tracking-tight leading-none">
-              My Notes
-            </h2>
-            <p className="text-[11.5px] text-slate-400 font-medium mt-1">
-              Create, organize and manage your study notes.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-            >
-              <LayoutTemplate className="w-3.5 h-3.5 text-slate-400" />
-              <span>Templates</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsAddingNote(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-[0_0_12px_rgba(168,85,247,0.4)] cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>New Note</span>
-            </button>
-          </div>
+    <div className="flex flex-col lg:flex-row h-full min-h-[75vh] gap-4 w-full text-white">
+      
+      {/* LEFT SIDEBAR: Notes List */}
+      <div className="w-full lg:w-1/3 flex flex-col gap-4 border-r-0 lg:border-r border-white/[0.08] lg:pr-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white tracking-tight">Your Notes</h2>
+          <button
+            onClick={handleCreateNew}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-[0_0_12px_rgba(168,85,247,0.4)] cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Note</span>
+          </button>
         </div>
 
-        {/* Inline Add Note Form */}
-        {isAddingNote && (
-          <form
-            onSubmit={handleAddNote}
-            className="flex flex-col gap-2 p-4 rounded-2xl bg-[#10131E] border border-purple-500/30"
-          >
-            {addError && (
-              <div className="flex items-center gap-2 text-rose-400 text-xs font-semibold">
-                <AlertCircle className="w-4 h-4" />
-                <span>{addError}</span>
-              </div>
-            )}
+        {/* Search & Filters */}
+        <div className="flex flex-col gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              autoFocus
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Note title..."
-              className="w-full bg-[#151828] border border-purple-500/40 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+              placeholder="Search notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#10131E] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
             />
-            <textarea
-              value={newContent}
-              onChange={(e) => setNewContent(e.target.value)}
-              placeholder="Note content (optional)..."
-              rows={3}
-              className="w-full bg-[#151828] border border-white/[0.06] rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none resize-none"
-            />
-            <div className="flex items-center gap-2">
-              <button type="submit" className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl cursor-pointer">
-                Save Note
-              </button>
-              <button type="button" onClick={() => setIsAddingNote(false)} className="px-3 py-1.5 text-slate-400 text-xs hover:text-white cursor-pointer">
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            {foldersCount.map((f, idx) => {
+              if (f.label === 'Archived Notes') return null;
+              const isActive = selectedFolder === f.label;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedFolder(f.label)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border ${
+                    isActive
+                      ? "bg-purple-600 border-purple-500 text-white"
+                      : "bg-[#10131E] border-white/[0.08] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <FolderOpen className="w-3 h-3" />
+                  <span>{f.label === 'All Notes' ? 'All' : f.label}</span>
+                  <span className={`px-1.5 py-0.5 rounded-md bg-black/20 ${isActive ? "text-purple-100" : "text-slate-500"}`}>
+                    {f.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-        {/* 2. Filter Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-2xl bg-[#10131E] border border-white/[0.08]">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-            {/* Search Input */}
-            <div className="relative min-w-[160px] sm:min-w-[200px] flex-1">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search notes..."
-                className="w-full bg-[#151828] border border-white/[0.06] hover:border-white/[0.12] focus:border-purple-500/50 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
+        {/* Notes List */}
+        <div className="flex flex-col gap-2 overflow-y-auto pr-1 pb-32">
+          {notes.length === 0 ? (
+            <div className="py-10">
+              <EmptyState
+                icon={FileText}
+                title="No notes found"
+                description="Create a new note to start writing."
+                actionLabel="Create Note"
+                onAction={handleCreateNew}
               />
             </div>
-
-            {/* Dropdowns */}
-            <select
-              value={selectedFolder}
-              onChange={(e) => setSelectedFolder(e.target.value)}
-              aria-label="Filter by folder"
-              className="bg-[#151828] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none cursor-pointer"
-            >
-              <option value="All">All Folders</option>
-              <option value="Strategy & Planning">Strategy & Planning</option>
-              <option value="Reasoning">Reasoning</option>
-              <option value="Maths">Maths</option>
-              <option value="English">English</option>
-              <option value="GK & Current Affairs">GK & Current Affairs</option>
-            </select>
-
-            <select
-              value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
-              aria-label="Filter by tag"
-              className="bg-[#151828] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none cursor-pointer hidden sm:block"
-            >
-              <option value="All">All Tags</option>
-              <option value="Strategy">Strategy</option>
-              <option value="Important">Important</option>
-              <option value="Formulas">Formulas</option>
-              <option value="Vocabulary">Vocabulary</option>
-            </select>
-
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              aria-label="Filter by type"
-              className="bg-[#151828] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none cursor-pointer hidden md:block"
-            >
-              <option value="All">All Types</option>
-              <option value="Markdown">Markdown</option>
-              <option value="RichText">Rich Text</option>
-            </select>
-
-            <select
-              value={selectedSort}
-              onChange={(e) => setSelectedSort(e.target.value)}
-              aria-label="Sort notes"
-              className="bg-[#151828] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none cursor-pointer"
-            >
-              <option value="Last Updated">Last Updated</option>
-              <option value="Created Date">Created Date</option>
-              <option value="Alphabetical">Alphabetical</option>
-            </select>
-          </div>
-
-          {/* View Mode Toggles */}
-          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-[#151828] border border-white/[0.06]">
-            <button
-              onClick={() => setViewMode("list")}
-              type="button"
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                viewMode === "list"
-                  ? "bg-purple-600 text-white"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode("grid")}
-              type="button"
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                viewMode === "grid"
-                  ? "bg-purple-600 text-white"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Grid className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* 3. Note Cards List */}
-        <div className="flex flex-col gap-2.5">
-          {notes.map((n) => (
-            <div
-              key={n.id}
-              className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-3.5 rounded-2xl bg-[#10131E] border border-white/[0.08] hover:border-white/[0.14] transition-all cursor-pointer group"
-            >
-              {/* Left Details */}
-              <div className="flex items-start gap-3.5 min-w-0 flex-1">
+          ) : (
+            notes.map((n) => {
+              const isActive = activeNoteId === n.id && !isAddingNote;
+              return (
                 <div
-                  className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${getDocColor(
-                    n.folder
-                  )}`}
+                  key={n.id}
+                  onClick={() => { setActiveNoteId(n.id); setIsAddingNote(false); }}
+                  className={`relative flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer group ${
+                    isActive 
+                      ? "bg-purple-600/10 border-purple-500/40" 
+                      : "bg-[#10131E] border-white/[0.08] hover:border-white/[0.15]"
+                  }`}
                 >
-                  <FileText className="w-5 h-5" />
-                </div>
-
-                <div className="flex flex-col min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xs sm:text-sm font-bold text-white tracking-tight group-hover:text-purple-300 transition-colors">
-                      {n.title}
+                  {n.is_pinned && (
+                    <div className="absolute top-3 right-3">
+                      <Pin className="w-3.5 h-3.5 text-purple-400 fill-purple-400" />
+                    </div>
+                  )}
+                  
+                  <div className="pr-6">
+                    <h3 className={`text-sm font-bold truncate ${isActive ? "text-purple-300" : "text-white"}`}>
+                      {n.title || "Untitled Note"}
                     </h3>
-                    {n.is_pinned && (
-                      <Pin className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
-                    )}
+                    <p className="text-[11px] text-slate-400 font-medium line-clamp-2 mt-1 mb-2">
+                      {n.description || "No preview available..."}
+                    </p>
                   </div>
-
-                  <p className="text-[11px] text-slate-400 font-medium line-clamp-2 mt-1 leading-relaxed">
-                    {n.description}
-                  </p>
-
-                  {/* Tags */}
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                    {n.tags.map((tag: string, tIdx: number) => (
-                      <span
-                        key={tIdx}
-                        className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] font-medium text-slate-300"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Metadata */}
-              <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0 border-t sm:border-t-0 border-white/[0.04] pt-2 sm:pt-0">
-                <div className="flex items-center gap-2">
-                  <span className="px-1.5 py-0.5 rounded bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[9.5px] font-bold">
-                    {n.format}
-                  </span>
-
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === n.id ? null : n.id); }}
-                      className="p-1 rounded text-slate-500 hover:text-slate-300 cursor-pointer"
-                    >
-                      <MoreVertical className="w-3.5 h-3.5" />
-                    </button>
-                    {openMenuId === n.id && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-6 z-20 w-36 rounded-xl bg-[#151828] border border-white/[0.1] shadow-xl py-1 flex flex-col text-xs"
-                      >
-                        <button
-                          onClick={async () => { setOpenMenuId(null); try { await togglePin(n.id); } catch {} }}
-                          className="flex items-center gap-2 px-3 py-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors text-left"
-                        >
-                          <Pin className="w-3 h-3" />
-                          <span>{n.is_pinned ? "Unpin" : "Pin"}</span>
-                        </button>
-                        <button
-                          onClick={async () => { setOpenMenuId(null); try { await deleteNote(n.id); } catch {} }}
-                          className="flex items-center gap-2 px-3 py-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors text-left"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
+                  
+                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/[0.04]">
+                    <div className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold border ${getDocColor(n.folder)}`}>
+                      <span>{n.folder === 'All' ? 'General' : n.folder}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{n.updated_date}</span>
                       </div>
-                    )}
+                      
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => setOpenMenuId(openMenuId === n.id ? null : n.id)}
+                          className="p-1 rounded text-slate-500 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </button>
+                        {openMenuId === n.id && (
+                          <div className="absolute right-0 top-6 z-50 w-32 rounded-xl bg-[#151828] border border-white/[0.1] shadow-xl py-1 flex flex-col text-xs">
+                            <button
+                              onClick={async () => { setOpenMenuId(null); await togglePin(n.id); }}
+                              className="flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors text-left"
+                            >
+                              <Pin className="w-3.5 h-3.5" />
+                              <span>{n.is_pinned ? "Unpin" : "Pin Note"}</span>
+                            </button>
+                            <button
+                              onClick={async () => { setOpenMenuId(null); await deleteNote(n.id); if (activeNoteId === n.id) setActiveNoteId(null); }}
+                              className="flex items-center gap-2 px-3 py-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors text-left"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
+              );
+            })
+          )}
+        </div>
+      </div>
 
-                <div className="flex flex-col items-end gap-0.5 mt-1 text-[10px] text-slate-500 font-medium">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5" />
-                    <span>{n.updated_date}</span>
-                  </div>
-                  <span className="font-mono text-slate-400">
-                    {n.word_count.toLocaleString()} words
-                  </span>
-                </div>
+      {/* RIGHT MAIN AREA: Note Editor */}
+      <div className="flex-1 flex flex-col h-full bg-[#090A10] rounded-2xl">
+        {(!activeNote && !isAddingNote) ? (
+          <div className="flex-1 flex items-center justify-center border border-dashed border-white/[0.08] rounded-2xl p-10">
+            <div className="flex flex-col items-center text-center max-w-sm">
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-purple-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">No Note Selected</h3>
+              <p className="text-sm text-slate-400 font-medium mb-6">
+                Select a note from the left sidebar to view and edit it, or create a brand new note to get started.
+              </p>
+              <button
+                onClick={handleCreateNew}
+                className="px-6 py-2.5 rounded-xl bg-white text-black hover:bg-slate-200 text-sm font-bold transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)] cursor-pointer"
+              >
+                Create New Note
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col h-full">
+            <div className="flex flex-col gap-3 mb-4">
+              <input
+                type="text"
+                placeholder="Note Title..."
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full bg-transparent text-3xl font-bold text-white placeholder-slate-600 focus:outline-none"
+              />
+              <div className="flex items-center justify-between">
+                <select
+                  value={editFolder}
+                  onChange={(e) => setEditFolder(e.target.value)}
+                  className="bg-[#10131E] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-300 focus:outline-none focus:border-purple-500/50 cursor-pointer"
+                >
+                  <option value="General">General</option>
+                  <option value="Strategy & Planning">Strategy & Planning</option>
+                  <option value="Reasoning">Reasoning</option>
+                  <option value="Maths">Maths</option>
+                  <option value="English">English</option>
+                  <option value="GK & Current Affairs">GK & Current Affairs</option>
+                </select>
+                
+                <button
+                  onClick={handleSaveNote}
+                  disabled={isSaving || (!editTitle.trim() && !editContent.trim())}
+                  className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-[0_0_12px_rgba(168,85,247,0.4)] cursor-pointer"
+                >
+                  {isSaving ? "Saving..." : "Save Note"}
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* 4. Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          showingText={notes.length === 0 ? "No notes yet" : `Showing ${Math.min((currentPage-1)*ITEMS_PER_PAGE+1, notes.length)} to ${Math.min(currentPage*ITEMS_PER_PAGE, notes.length)} of ${notes.length} note${notes.length !== 1 ? 's' : ''}`}
-        />
+            
+            <div className="flex-1 overflow-hidden">
+              <RichTextEditor
+                content={editContent}
+                onChange={setEditContent}
+                placeholder="Write your brilliant note here..."
+              />
+            </div>
+          </div>
+        )}
       </div>
+
     </div>
   );
 }

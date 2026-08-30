@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import { PlacementResource } from "@/types/placement";
 
@@ -27,16 +27,33 @@ export function usePlacementResources() {
   const [activeType, setActiveType] = useState("ALL");
   const [activePriority, setActivePriority] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
 
-  const resources = data || [];
+  // Load pinned IDs on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("vos_pinned_resources");
+      if (stored) setPinnedIds(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const resources = useMemo(() => {
+    if (!data) return [];
+    return data.map(r => ({
+      ...r,
+      is_pinned: pinnedIds.includes(r.id)
+    }));
+  }, [data, pinnedIds]);
 
   const categories = useMemo(() => {
     const cats = Array.from(new Set(resources.map((r) => r.category)));
     return ["ALL", ...cats];
   }, [resources]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+
   const filteredResources = useMemo(() => {
-    return resources.filter((res) => {
+    let result = resources.filter((res) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = res.title.toLowerCase().includes(q);
@@ -49,13 +66,37 @@ export function usePlacementResources() {
         return false;
       }
 
+      if (activeType !== "ALL" && res.type !== activeType) {
+        return false;
+      }
+
       if (activePriority !== "ALL" && res.priority !== activePriority) {
         return false;
       }
 
       return true;
     });
-  }, [resources, searchQuery, activeCategory, activePriority]);
+
+    // Sort pinned first
+    result.sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return 0;
+    });
+
+    return result;
+  }, [resources, searchQuery, activeCategory, activeType, activePriority]);
+
+  const togglePin = (id: string, currentPinStatus: boolean) => {
+    const newPinned = currentPinStatus 
+      ? pinnedIds.filter(pid => pid !== id)
+      : [...pinnedIds, id];
+    
+    setPinnedIds(newPinned);
+    try {
+      localStorage.setItem("vos_pinned_resources", JSON.stringify(newPinned));
+    } catch {}
+  };
 
   const addResource = async (newRes: any) => {
     try {
@@ -103,8 +144,11 @@ export function usePlacementResources() {
     setActiveType,
     activePriority,
     setActivePriority,
+    currentPage,
+    setCurrentPage,
     addResource,
     deleteResource,
+    togglePin,
     isAddModalOpen,
     setIsAddModalOpen,
     isLoading: isLoading && !data,

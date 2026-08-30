@@ -12,11 +12,11 @@ export function TopHeader() {
 
   const weeklyPattern = React.useMemo(() => {
     const today = getISTDate();
-    const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday in IST
+    const currentDay = today.getUTCDay(); // 0 is Sunday, 1 is Monday in IST
     const diffToMonday = currentDay === 0 ? 6 : currentDay - 1; 
     
     const monday = new Date(today);
-    monday.setDate(today.getDate() - diffToMonday);
+    monday.setUTCDate(today.getUTCDate() - diffToMonday);
     
     const pattern = [];
     const dayNames = ["M", "T", "W", "T", "F", "S", "S"];
@@ -25,7 +25,7 @@ export function TopHeader() {
     
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
+      d.setUTCDate(monday.getUTCDate() + i);
       const dateStr = getISTDateString(d);
       
       let status = "pending";

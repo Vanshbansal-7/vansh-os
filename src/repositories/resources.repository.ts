@@ -92,6 +92,23 @@ export class ResourcesRepository {
     
     return true;
   }
+
+  async update(id: string, updates: Partial<ResourceEntity>): Promise<ResourceEntity> {
+    const supabase = this.getSupabase();
+    const { data, error } = await supabase
+      .from("resources")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) {
+      logger.error("Database error updating resource", { error, id, updates });
+      throw new Error(`Database Update Failed: ${error.message}`);
+    }
+
+    return data as ResourceEntity;
+  }
 }
 
 export const resourcesRepository = new ResourcesRepository();

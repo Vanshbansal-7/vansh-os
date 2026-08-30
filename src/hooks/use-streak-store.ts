@@ -12,7 +12,9 @@ const STORAGE_KEY = "vos_streak_v3";
 export function getISTDate(): Date {
   const now = new Date();
   const istOffset = 5.5 * 60 * 60 * 1000;
-  return new Date(now.getTime() + (istOffset - now.getTimezoneOffset() * 60 * 1000));
+  // now.getTime() is UTC milliseconds. Adding istOffset gives a Date object whose 
+  // UTC time matches the IST local time. This allows us to use .toISOString() safely.
+  return new Date(now.getTime() + istOffset);
 }
 
 export function getISTDateString(istDate: Date): string {

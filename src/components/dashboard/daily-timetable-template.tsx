@@ -20,7 +20,9 @@ export function DailyTimetableTemplate() {
   // Set default day to true current day
   useEffect(() => {
     setIsClient(true);
-    const dayIndex = new Date().getDay(); // 0 is Sunday, 1 is Monday
+    // Use IST timezone
+    const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const dayIndex = nowIST.getDay(); // 0 is Sunday, 1 is Monday
     const map: Record<number, DayOfWeek> = {
       0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat"
     };
@@ -62,7 +64,7 @@ export function DailyTimetableTemplate() {
       <div className="rounded-2xl p-2.5 bg-[#10131E] border border-white/[0.08] shadow-sm flex flex-col h-full">
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-[14px] font-bold text-white tracking-tight">Master Template</h3>
+            <h3 className="text-[14px] font-bold text-white tracking-tight">Time Table</h3>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
               {selectedDay}
             </span>

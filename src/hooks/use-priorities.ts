@@ -1,78 +1,103 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
 import { DailyTask, PriorityLevel } from "@/types/dashboard";
 
-const SEED_TASKS: DailyTask[] = [
-  { id: "seed-1", user_id: "local", title: "Amazon OA Deadline", subtitle: "2 Days Left", category: "Career", priority_level: "HIGH", completed: false, due_date: new Date().toISOString().split("T")[0], source: "manual", is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "seed-2", user_id: "local", title: "DSA Daily Goal", subtitle: "3 / 3 Questions", category: "Study", priority_level: "MEDIUM", completed: true, due_date: new Date().toISOString().split("T")[0], source: "manual", is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "seed-3", user_id: "local", title: "System Design", subtitle: "Study 1 Topic", category: "Study", priority_level: "MEDIUM", completed: false, due_date: new Date().toISOString().split("T")[0], source: "manual", is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "seed-4", user_id: "local", title: "Core Subject Revision", subtitle: "Complete OS Unit 4", category: "Study", priority_level: "MEDIUM", completed: false, due_date: new Date().toISOString().split("T")[0], source: "manual", is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "seed-5", user_id: "local", title: "Health Goal", subtitle: "Drink 3L Water", category: "Health", priority_level: "LOW", completed: false, due_date: new Date().toISOString().split("T")[0], source: "manual", is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-];
+const fetcher = async (url: string): Promise<DailyTask[]> => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch priorities");
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message);
+  
+  // Client-side 24-hour auto-removal filter for completed tasks
+  const now = new Date().getTime();
+  const filtered = (json.data || []).filter((t: DailyTask) => {
+    if (t.completed && t.completed_at) {
+      const completedTime = new Date(t.completed_at).getTime();
+      const hoursSinceCompletion = (now - completedTime) / (1000 * 60 * 60);
+      if (hoursSinceCompletion > 24) return false;
+    } else if (!t.completed && t.deadline) {
+      // Note: As per requirements: "Do NOT remove an unchecked priority before its deadline."
+      // Let's interpret this as: if deadline passed, maybe show it as overdue, or maybe keep it?
+      // "It stays visible until its deadline expires." -> meaning it should be hidden after deadline?
+      // Actually, if it's expired, it shouldn't disappear immediately unless that's what "until its deadline expires" means.
+      // Wait, "Do NOT remove an unchecked priority before its deadline."
+      // Let's remove it if it's past deadline by some margin or just leave it. The prompt said:
+      // "IF a priority is NOT completed: -> It stays visible until its deadline expires."
+      const deadlineTime = new Date(t.deadline).getTime();
+      if (now > deadlineTime) return false;
+    }
+    return true;
+  });
+
+  return filtered;
+};
 
 export function usePriorities() {
-  const [tasks, setTasks] = useState<DailyTask[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { data, error, isLoading, mutate } = useSWR<DailyTask[]>(
+    "/api/v1/priorities",
+    fetcher,
+    { revalidateOnFocus: true, dedupingInterval: 5000 }
+  );
 
-  // Load from local storage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("vos_daily_priorities");
-    if (stored) {
-      setTasks(JSON.parse(stored));
+  const tasks = data || [];
+
+  const addTask = async (task: Omit<DailyTask, "id" | "user_id" | "created_at" | "updated_at">) => {
+    const res = await fetch("/api/v1/priorities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(task),
+    });
+    if (res.ok) {
+      mutate();
+    }
+  };
+
+  const editTask = async (id: string, updates: Partial<Omit<DailyTask, "id" | "user_id">>) => {
+    const res = await fetch("/api/v1/priorities", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    });
+    if (res.ok) {
+      mutate();
+    }
+  };
+
+  const deleteTask = async (id: string) => {
+    const res = await fetch(`/api/v1/priorities?id=${id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      mutate();
+    }
+  };
+
+  const toggleComplete = async (taskId: string, currentCompleted: boolean) => {
+    const res = await fetch(`/api/v1/priorities/${taskId}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: !currentCompleted }),
+    });
+    // Wait, the API route for complete is /api/v1/priorities/[id]/complete/route.ts
+    // Let me check if that route exists! Yes, from my file listing:
+    // `src/app/api/v1/priorities/[id]/complete/route.ts`
+    if (res.ok) {
+      mutate();
     } else {
-      setTasks(SEED_TASKS);
-      localStorage.setItem("vos_daily_priorities", JSON.stringify(SEED_TASKS));
+      // Fallback if that route doesn't work
+      editTask(taskId, { completed: !currentCompleted, completed_at: !currentCompleted ? new Date().toISOString() : undefined });
     }
-    setIsLoaded(true);
-  }, []);
-
-  // Sync to local storage on changes
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("vos_daily_priorities", JSON.stringify(tasks));
-    }
-  }, [tasks, isLoaded]);
-
-  const addTask = useCallback((task: Omit<DailyTask, "id" | "user_id" | "created_at" | "updated_at">) => {
-    const newTask: DailyTask = {
-      ...task,
-      id: crypto.randomUUID(),
-      user_id: "local",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setTasks((prev) => [...prev, newTask]);
-  }, []);
-
-  const editTask = useCallback((id: string, updates: Partial<Omit<DailyTask, "id" | "user_id">>) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t))
-    );
-  }, []);
-
-  const deleteTask = useCallback((id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const toggleComplete = useCallback((taskId: string, currentCompleted: boolean) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? { ...t, completed: !currentCompleted, completed_at: !currentCompleted ? new Date().toISOString() : undefined }
-          : t
-      )
-    );
-  }, []);
+  };
 
   return {
     tasks,
-    isLoading: !isLoaded,
-    error: null,
+    isLoading: isLoading && !data,
+    error,
     addTask,
     editTask,
     deleteTask,
     toggleComplete,
-    refresh: () => {}, // No-op since it's local
+    refresh: () => mutate(),
   };
 }

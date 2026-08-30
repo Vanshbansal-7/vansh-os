@@ -30,48 +30,11 @@ function calcElapsed(startTime: string, currentTime: string): string {
   return `${hours}:${mins}:00`;
 }
 
-// Authentic fallback seed data (when DB has no data or user is not auth'd)
-const SEED_TIMETABLE: Omit<TimetableEntry, 'id' | 'user_id'>[] = [
-  { title: 'Wake Up & Fresh', category: 'Health', start_time: '07:00', end_time: '08:00', priority: 'MEDIUM', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'emerald' },
-  { title: 'DSA – Graphs & DP', category: 'Deep Work', start_time: '08:00', end_time: '09:30', priority: 'HIGH', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'purple' },
-  { title: 'Core Subjects – OS Unit 4', category: 'Deep Work', start_time: '10:00', end_time: '11:30', priority: 'HIGH', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'purple' },
-  { title: 'Apply to 2 Companies', category: 'Career', start_time: '12:00', end_time: '13:00', priority: 'HIGH', status: 'upcoming', recurring: true, day_of_week: [1,2,3,4,5], is_active: true, color_tag: 'blue' },
-  { title: 'Lunch & Rest', category: 'Life', start_time: '13:00', end_time: '14:00', priority: 'LOW', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'slate' },
-  { title: 'SSC CGL – Quant Practice', category: 'CGL', start_time: '14:00', end_time: '15:00', priority: 'HIGH', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'sky' },
-  { title: 'DBMS Revision & Practice', category: 'Learning', start_time: '15:00', end_time: '16:30', priority: 'MEDIUM', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'sky' },
-  { title: 'Defense Prep – Navy', category: 'Defense', start_time: '17:00', end_time: '19:00', priority: 'HIGH', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'teal' },
-  { title: 'Football Training', category: 'Health', start_time: '19:00', end_time: '20:00', priority: 'MEDIUM', status: 'upcoming', recurring: true, day_of_week: [1,2,3,4,5,6], is_active: true, color_tag: 'emerald' },
-  { title: 'Dinner & Family', category: 'Life', start_time: '20:00', end_time: '21:00', priority: 'LOW', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'amber' },
-  { title: 'Read + Journal', category: 'Review', start_time: '21:00', end_time: '22:00', priority: 'MEDIUM', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'slate' },
-  { title: 'Plan Tomorrow', category: 'Review', start_time: '22:00', end_time: '22:30', priority: 'MEDIUM', status: 'upcoming', recurring: true, day_of_week: [0,1,2,3,4,5,6], is_active: true, color_tag: 'slate' },
-];
-
-function applyStatus(entries: Omit<TimetableEntry, 'id' | 'user_id'>[]): TimetableEntry[] {
-  const { timeStr, dayOfWeek } = getISTDateAndTime();
-  return entries
-    .filter(e => e.day_of_week.includes(dayOfWeek) && e.is_active)
-    .map((e, idx) => {
-      const status = calculateStatus(e.start_time, e.end_time, timeStr);
-      const elapsed = status === 'in_progress' ? calcElapsed(e.start_time, timeStr) : undefined;
-      return {
-        ...e,
-        id: `seed-${idx}`,
-        user_id: 'anonymous',
-        status,
-        elapsed,
-        window: `${e.start_time} – ${e.end_time}`,
-      };
-    });
-}
-
 export class SupabaseTimetableDatasource {
   async getTodaysTimetable(userId?: string): Promise<TimetableEntry[]> {
-    const { timeStr, dayOfWeek } = getISTDateAndTime();
+    if (!userId) return [];
 
-    if (!userId) {
-      logger.info('No userId — returning seed timetable', { timeStr });
-      return applyStatus(SEED_TIMETABLE);
-    }
+    const { timeStr, dayOfWeek } = getISTDateAndTime();
 
     try {
       const supabase = await createClient();
@@ -94,10 +57,32 @@ export class SupabaseTimetableDatasource {
         }));
       }
     } catch (err) {
-      logger.warn('Failed to fetch timetable from DB, using seed', { err });
+      logger.warn('Failed to fetch timetable from DB', { err });
     }
 
-    return applyStatus(SEED_TIMETABLE);
+    return [];
+  }
+
+  async createEntry(entry: Partial<TimetableEntry>, userId: string): Promise<TimetableEntry | null> {
+    try {
+      const supabase = await createClient();
+      const newEntry = {
+        ...entry,
+        user_id: userId,
+      };
+
+      const { data, error } = await supabase
+        .from('daily_timetable')
+        .insert([newEntry])
+        .select()
+        .single();
+
+      if (!error && data) return data as TimetableEntry;
+      logger.error('Failed to create timeline entry', { error });
+    } catch (err) {
+      logger.error('Create timeline entry exception', { err });
+    }
+    return null;
   }
 }
 

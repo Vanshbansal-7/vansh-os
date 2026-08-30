@@ -38,6 +38,7 @@ export interface PlacementResource {
   priority: 'HIGH' | 'MEDIUM' | 'LOW';
   metadata: string;
   added_date: string;
+  is_pinned?: boolean;
 }
 
 export type PlacementTabId = 'tracker' | 'resources';

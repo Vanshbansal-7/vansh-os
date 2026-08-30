@@ -50,7 +50,8 @@ export const CGLResourceSchema = z.object({
 export const CGLNoteSchema = z.object({
   id: z.string(),
   title: z.string(),
-  description: z.string(),
+  content: z.string().optional(),
+  description: z.string().optional(),
   folder: z.string(),
   tags: z.array(z.string()),
   format: z.string().default('MD'),

@@ -32,9 +32,6 @@ export function ProgressSummary({
             {overallPercentage}%
           </span>
         </div>
-        <span className="text-xs text-slate-400 font-medium">
-          {completedTopics} / {totalTopics} topics completed
-        </span>
       </div>
 
       {/* Main Full-width Progress Bar */}

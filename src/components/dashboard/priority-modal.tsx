@@ -14,6 +14,7 @@ export function PriorityModal({ isOpen, onClose, onSave, initialData }: Priority
   const [subtitle, setSubtitle] = useState("");
   const [category, setCategory] = useState("Work");
   const [priorityLevel, setPriorityLevel] = useState<PriorityLevel>("MEDIUM");
+  const [deadline, setDeadline] = useState<string>("");
 
   useEffect(() => {
     if (initialData) {
@@ -21,11 +22,28 @@ export function PriorityModal({ isOpen, onClose, onSave, initialData }: Priority
       setSubtitle(initialData.subtitle || "");
       setCategory(initialData.category);
       setPriorityLevel(initialData.priority_level);
+      
+      if (initialData.deadline) {
+        // deadline is likely an ISO string "YYYY-MM-DDTHH:mm:ss.sssZ"
+        // We need it in "YYYY-MM-DDTHH:mm" for the datetime-local input
+        try {
+          const d = new Date(initialData.deadline);
+          // adjust for local timezone offset for the input
+          const tzOffset = d.getTimezoneOffset() * 60000;
+          const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
+          setDeadline(localISOTime);
+        } catch {
+          setDeadline("");
+        }
+      } else {
+        setDeadline("");
+      }
     } else {
       setTitle("");
       setSubtitle("");
       setCategory("Work");
       setPriorityLevel("MEDIUM");
+      setDeadline("");
     }
   }, [initialData, isOpen]);
 
@@ -33,11 +51,18 @@ export function PriorityModal({ isOpen, onClose, onSave, initialData }: Priority
 
   const handleSave = () => {
     if (!title.trim()) return;
+    
+    let parsedDeadline: string | undefined = undefined;
+    if (deadline) {
+      parsedDeadline = new Date(deadline).toISOString();
+    }
+
     onSave({
       title,
       subtitle: subtitle.trim() || undefined,
       category,
       priority_level: priorityLevel,
+      deadline: parsedDeadline,
       completed: initialData ? initialData.completed : false,
       due_date: initialData ? initialData.due_date : new Date().toISOString().split("T")[0],
       source: "manual",
@@ -115,6 +140,16 @@ export function PriorityModal({ isOpen, onClose, onSave, initialData }: Priority
                 <option value="LOW">Low</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Deadline (Optional)</label>
+            <input
+              type="datetime-local"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="w-full bg-[#10131E] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+            />
           </div>
         </div>
 

@@ -40,6 +40,7 @@ export interface VaultAsset {
   size: string;
   date_added: string;
   is_favorite: boolean;
+  description?: string;
 }
 
 export interface YouTubeResource {

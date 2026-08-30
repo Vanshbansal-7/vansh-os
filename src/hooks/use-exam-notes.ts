@@ -31,7 +31,7 @@ export function useExamNotes(moduleSlug: string, examId?: string) {
   const [selectedTag, setSelectedTag] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedSort, setSelectedSort] = useState('Last Updated');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
 
   const notes = (data || []).map((n: any) => ({
@@ -116,6 +116,20 @@ export function useExamNotes(moduleSlug: string, examId?: string) {
     await mutate();
   };
 
+  const updateNote = async (id: string, updates: any) => {
+    const res = await fetch('/api/v1/notes', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json?.error?.message || 'Failed to update note in database');
+    }
+    await mutate();
+    return json.data;
+  };
+
   return {
     notes,
     searchQuery,
@@ -135,6 +149,7 @@ export function useExamNotes(moduleSlug: string, examId?: string) {
     foldersCount,
     notesStats,
     addNote,
+    updateNote,
     deleteNote,
     togglePin,
     isLoading: isLoading && !data,

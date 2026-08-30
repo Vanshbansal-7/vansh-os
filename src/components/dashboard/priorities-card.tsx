@@ -163,6 +163,11 @@ export function PrioritiesCard() {
                           {item.subtitle}
                         </span>
                       )}
+                      {item.deadline && (
+                        <span className={`text-[9px] font-mono mt-0.5 transition-opacity ${item.completed ? 'text-slate-500 opacity-40' : 'text-amber-400'}`}>
+                          Due: {new Date(item.deadline).toLocaleString('en-IN', { hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
                     </div>
                   </div>
 
