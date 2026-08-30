@@ -2,19 +2,23 @@ import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 
+const dayMap: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6
+};
+
 export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    // We will still fetch even if no user, or just return empty
     if (!user) return NextResponse.json({ success: true, data: [] });
 
     const { data, error } = await supabase
-      .from('timetable_blocks')
+      .from('daily_timetable')
       .select('*')
       .eq('user_id', user.id)
-      .order('order_index', { ascending: true });
+      .eq('is_active', true)
+      .order('start_time', { ascending: true });
 
     if (error) throw error;
 
@@ -32,9 +36,24 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: { message: 'Unauthorized' } }, { status: 401 });
 
+    const dayInt = dayMap[body.day];
+    if (dayInt === undefined) throw new Error("Invalid day");
+
+    const newEntry = {
+      title: body.title,
+      start_time: body.start_time,
+      end_time: body.end_time,
+      day_of_week: [dayInt],
+      category: 'General',
+      priority: 'MEDIUM',
+      recurring: true,
+      is_active: true,
+      user_id: user.id
+    };
+
     const { data, error } = await supabase
-      .from('timetable_blocks')
-      .insert([{ ...body, user_id: user.id, created_at: new Date().toISOString() }])
+      .from('daily_timetable')
+      .insert([newEntry])
       .select()
       .single();
 
@@ -49,14 +68,21 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
-    const { id, ...updates } = body;
+    const { id, title, start_time, end_time } = body;
+    
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: { message: 'Unauthorized' } }, { status: 401 });
 
+    const updates: any = {};
+    if (title) updates.title = title;
+    if (start_time) updates.start_time = start_time;
+    if (end_time) updates.end_time = end_time;
+    updates.updated_at = new Date().toISOString();
+
     const { error } = await supabase
-      .from('timetable_blocks')
-      .update({ ...updates })
+      .from('daily_timetable')
+      .update(updates)
       .eq('id', id)
       .eq('user_id', user.id);
 
@@ -77,7 +103,7 @@ export async function DELETE(req: Request) {
     if (!user) return NextResponse.json({ success: false, error: { message: 'Unauthorized' } }, { status: 401 });
 
     const { error } = await supabase
-      .from('timetable_blocks')
+      .from('daily_timetable')
       .delete()
       .eq('id', id)
       .eq('user_id', user.id);

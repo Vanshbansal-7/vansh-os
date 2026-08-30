@@ -1,15 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Reorder } from "framer-motion";
-import { GripVertical, Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
 import { useTimetableTemplate, DayOfWeek, TemplateBlock } from "@/hooks/use-timetable-template";
 import { TimetableBlockModal } from "./timetable-block-modal";
 
 const DAYS: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function DailyTimetableTemplate() {
-  const { templates, isLoading, addBlock, editBlock, deleteBlock, reorderBlocks } = useTimetableTemplate();
+  const { templates, isLoading, addBlock, editBlock, deleteBlock } = useTimetableTemplate();
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>("Mon");
   const [isClient, setIsClient] = useState(false);
 
@@ -95,20 +94,14 @@ export function DailyTimetableTemplate() {
               <span className="text-[10px]">Add slots to build your template</span>
             </div>
           ) : (
-            <Reorder.Group 
-              axis="y" 
-              values={currentBlocks} 
-              onReorder={(newOrder) => reorderBlocks(selectedDay, newOrder)}
-              className="flex flex-col divide-y divide-white/[0.04]"
-            >
+            <div className="flex flex-col divide-y divide-white/[0.04]">
               {currentBlocks.map((block) => (
-                <Reorder.Item
+                <div
                   key={block.id}
-                  value={block}
-                  className="group flex items-center justify-between py-1 transition-colors hover:bg-white/[0.02] -mx-1 px-1 rounded-lg cursor-grab active:cursor-grabbing"
+                  className="group flex items-center justify-between py-1 transition-colors hover:bg-white/[0.02] px-2 rounded-lg"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <GripVertical className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 shrink-0 transition-colors" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500/50 shrink-0" />
                     <div className="flex flex-col min-w-0">
                       <span className="font-bold text-[10.5px] text-white leading-tight truncate">
                         {block.title}
@@ -133,9 +126,9 @@ export function DailyTimetableTemplate() {
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
-                </Reorder.Item>
+                </div>
               ))}
-            </Reorder.Group>
+            </div>
           )}
         </div>
 

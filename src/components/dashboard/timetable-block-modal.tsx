@@ -10,15 +10,18 @@ interface TimetableBlockModalProps {
 }
 
 export function TimetableBlockModal({ isOpen, onClose, onSave, initialData }: TimetableBlockModalProps) {
-  const [time, setTime] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [title, setTitle] = useState("");
 
   useEffect(() => {
-    if (initialData) {
-      setTime(initialData.time);
+    if (initialData && initialData.start_time && initialData.end_time) {
+      setStartTime(initialData.start_time.slice(0, 5));
+      setEndTime(initialData.end_time.slice(0, 5));
       setTitle(initialData.title);
     } else {
-      setTime("");
+      setStartTime("09:00");
+      setEndTime("10:00");
       setTitle("");
     }
   }, [initialData, isOpen]);
@@ -26,10 +29,12 @@ export function TimetableBlockModal({ isOpen, onClose, onSave, initialData }: Ti
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!time.trim() || !title.trim()) return;
+    if (!startTime || !endTime || !title.trim()) return;
     onSave({
-      time: time.trim(),
+      time: `${startTime} - ${endTime}`,
       title: title.trim(),
+      start_time: startTime,
+      end_time: endTime
     });
     onClose();
   };
@@ -50,16 +55,26 @@ export function TimetableBlockModal({ isOpen, onClose, onSave, initialData }: Ti
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Time Slot *</label>
-            <input
-              type="text"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-[#10131E] border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-purple-500/50 transition-colors"
-              placeholder="e.g. 09:00 - 11:00"
-              autoFocus
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Start Time *</label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full bg-[#10131E] border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-purple-500/50 transition-colors"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">End Time *</label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full bg-[#10131E] border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-purple-500/50 transition-colors"
+              />
+            </div>
           </div>
 
           <div>
@@ -84,7 +99,7 @@ export function TimetableBlockModal({ isOpen, onClose, onSave, initialData }: Ti
           </button>
           <button 
             onClick={handleSave}
-            disabled={!time.trim() || !title.trim()}
+            disabled={!startTime || !endTime || !title.trim()}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-500 text-white text-xs font-semibold hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Save className="w-3.5 h-3.5" />

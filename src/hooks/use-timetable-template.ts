@@ -8,7 +8,8 @@ export interface TemplateBlock {
   time: string; // e.g. "09:00 - 11:00"
   title: string;
   day?: string;
-  order_index?: number;
+  start_time?: string;
+  end_time?: string;
 }
 
 export type DayOfWeek = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
@@ -19,21 +20,32 @@ const fetcher = async (url: string) => {
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message);
 
-  // Group by day
+  const dayMap = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
   const grouped: Record<DayOfWeek, TemplateBlock[]> = {
     Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: []
   };
 
-  (json.data || []).forEach((block: any) => {
-    if (block.day && grouped[block.day as DayOfWeek]) {
-      grouped[block.day as DayOfWeek].push({
-        id: block.id,
-        time: block.time,
-        title: block.title,
-        day: block.day,
-        order_index: block.order_index,
-      });
-    }
+  (json.data || []).forEach((row: any) => {
+    const timeStr = `${row.start_time.slice(0, 5)} - ${row.end_time.slice(0, 5)}`;
+    (row.day_of_week || []).forEach((d: number) => {
+      const dayName = dayMap[d] as DayOfWeek;
+      if (grouped[dayName]) {
+        grouped[dayName].push({
+          id: row.id,
+          time: timeStr,
+          title: row.title,
+          day: dayName,
+          start_time: row.start_time,
+          end_time: row.end_time
+        });
+      }
+    });
+  });
+
+  // Sort each day chronologically
+  Object.keys(grouped).forEach(day => {
+    grouped[day as DayOfWeek].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
   });
 
   return grouped;

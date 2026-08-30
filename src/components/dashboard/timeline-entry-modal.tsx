@@ -18,6 +18,11 @@ export function TimelineEntryModal({ isOpen, onClose, onSave }: TimelineEntryMod
 
   const handleSave = () => {
     if (!title.trim() || !startTime.trim() || !endTime.trim()) return;
+    
+    // Get IST day
+    const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const dayIndex = nowIST.getDay();
+    
     onSave({
       title: title.trim(),
       category,
@@ -25,7 +30,7 @@ export function TimelineEntryModal({ isOpen, onClose, onSave }: TimelineEntryMod
       end_time: endTime,
       priority: "MEDIUM",
       recurring: false,
-      day_of_week: [new Date().getDay()],
+      day_of_week: [dayIndex],
       is_active: true,
       color_tag: "purple",
     });
