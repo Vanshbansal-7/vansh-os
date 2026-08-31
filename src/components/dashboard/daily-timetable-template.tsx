@@ -58,14 +58,45 @@ export function DailyTimetableTemplate() {
     }
   };
 
+  const getDayFocus = (day: DayOfWeek) => {
+    if (day === "Mon" || day === "Tue") {
+      return {
+        label: "College Day",
+        desc: "Study Timetable Off",
+        style: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+      };
+    }
+    if (day === "Wed" || day === "Fri") {
+      return {
+        label: "Learning + Aptitude",
+        desc: "Alpha Batch + Project + CS + Aptitude",
+        style: "bg-purple-500/15 text-purple-300 border-purple-500/30",
+      };
+    }
+    if (day === "Thu" || day === "Sat") {
+      return {
+        label: "Learning + English",
+        desc: "Alpha Batch + Project + CS + English",
+        style: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+      };
+    }
+    return {
+      label: "Revision + Review",
+      desc: "Weekly DSA Test + Review + Next Week Plan",
+      style: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    };
+  };
+
+  const dayFocus = getDayFocus(selectedDay);
+
   return (
     <>
-      <div className="rounded-2xl p-2.5 bg-[#10131E] border border-white/[0.08] shadow-sm flex flex-col h-full">
+      <div className="rounded-2xl p-3 bg-[#10131E] border border-white/[0.08] shadow-sm flex flex-col h-full">
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex items-center justify-between">
             <h3 className="text-[14px] font-bold text-white tracking-tight">Time Table</h3>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              {selectedDay}
+            <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${dayFocus.style}`}>
+              {dayFocus.label}
             </span>
           </div>
 
@@ -81,7 +112,7 @@ export function DailyTimetableTemplate() {
                     : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
                 }`}
               >
-                {day.slice(0, 1)}
+                {day}
               </button>
             ))}
           </div>

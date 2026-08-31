@@ -55,6 +55,21 @@ export function TimelineCard() {
     }
   };
 
+  const isCollegeDay = React.useMemo(() => {
+    const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const day = nowIST.getDay();
+    return day === 1 || day === 2;
+  }, []);
+
+  const dayLabel = React.useMemo(() => {
+    const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const day = nowIST.getDay();
+    if (day === 1 || day === 2) return { text: "College Day", style: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
+    if (day === 3 || day === 5) return { text: "Learning + Aptitude", style: "bg-purple-500/15 text-purple-300 border-purple-500/30" };
+    if (day === 4 || day === 6) return { text: "Learning + English", style: "bg-sky-500/15 text-sky-300 border-sky-500/30" };
+    return { text: "Revision + Test", style: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
+  }, []);
+
   return (
     <>
       <div className="rounded-2xl p-4 bg-[#10131E] border border-white/[0.08] shadow-sm flex flex-col h-full max-h-[550px]">
@@ -65,6 +80,9 @@ export function TimelineCard() {
             <h3 className="text-[15px] font-bold text-white tracking-tight">
               Today&apos;s Timeline
             </h3>
+            <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold tracking-wide ${dayLabel.style}`}>
+              {dayLabel.text}
+            </span>
             {activeSession && (
               <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
                 <div className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${!activeSession.isPaused ? 'animate-pulse' : ''}`} />
