@@ -6,19 +6,19 @@ export class TasksRepository {
     return supabaseTasksDatasource.getTodaysTasks(userId);
   }
 
-  async toggleComplete(taskId: string, userId: string, completed: boolean): Promise<boolean> {
+  async toggleComplete(taskId: string, userId?: string, completed: boolean = true): Promise<boolean> {
     return supabaseTasksDatasource.toggleTaskComplete(taskId, userId, completed);
   }
 
-  async createTask(task: Partial<DailyTask>, userId: string): Promise<DailyTask | null> {
+  async createTask(task: Partial<DailyTask>, userId?: string): Promise<DailyTask | null> {
     return supabaseTasksDatasource.createTask(task, userId);
   }
 
-  async editTask(taskId: string, userId: string, updates: Partial<DailyTask>): Promise<boolean> {
+  async editTask(taskId: string, userId?: string, updates?: Partial<DailyTask>): Promise<boolean> {
     return supabaseTasksDatasource.editTask(taskId, userId, updates);
   }
 
-  async deleteTask(taskId: string, userId: string): Promise<boolean> {
+  async deleteTask(taskId: string, userId?: string): Promise<boolean> {
     return supabaseTasksDatasource.deleteTask(taskId, userId);
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { DailyTask, PriorityLevel } from "@/types/dashboard";
+import { DailyTask } from "@/types/dashboard";
 
 const fetcher = async (url: string): Promise<DailyTask[]> => {
   const res = await fetch(url);
@@ -9,24 +9,17 @@ const fetcher = async (url: string): Promise<DailyTask[]> => {
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message);
   
-  // Client-side 24-hour auto-removal filter for completed tasks
-  const now = new Date().getTime();
+  const now = Date.now();
   const filtered = (json.data || []).filter((t: DailyTask) => {
-    if (t.completed && t.completed_at) {
-      const completedTime = new Date(t.completed_at).getTime();
-      const hoursSinceCompletion = (now - completedTime) / (1000 * 60 * 60);
-      if (hoursSinceCompletion > 24) return false;
-    } else if (!t.completed && t.deadline) {
-      // Note: As per requirements: "Do NOT remove an unchecked priority before its deadline."
-      // Let's interpret this as: if deadline passed, maybe show it as overdue, or maybe keep it?
-      // "It stays visible until its deadline expires." -> meaning it should be hidden after deadline?
-      // Actually, if it's expired, it shouldn't disappear immediately unless that's what "until its deadline expires" means.
-      // Wait, "Do NOT remove an unchecked priority before its deadline."
-      // Let's remove it if it's past deadline by some margin or just leave it. The prompt said:
-      // "IF a priority is NOT completed: -> It stays visible until its deadline expires."
+    // If marked as done/completed, automatically remove from active list
+    if (t.completed) return false;
+
+    // If deadline has ended (passed), automatically remove from active list
+    if (t.deadline) {
       const deadlineTime = new Date(t.deadline).getTime();
-      if (now > deadlineTime) return false;
+      if (!isNaN(deadlineTime) && now > deadlineTime) return false;
     }
+
     return true;
   });
 
@@ -37,7 +30,7 @@ export function usePriorities() {
   const { data, error, isLoading, mutate } = useSWR<DailyTask[]>(
     "/api/v1/priorities",
     fetcher,
-    { revalidateOnFocus: true, dedupingInterval: 5000 }
+    { revalidateOnFocus: true, dedupingInterval: 2000 }
   );
 
   const tasks = data || [];
@@ -65,6 +58,9 @@ export function usePriorities() {
   };
 
   const deleteTask = async (id: string) => {
+    // Optimistically remove from list
+    mutate((current) => (current || []).filter((t) => t.id !== id), false);
+
     const res = await fetch(`/api/v1/priorities?id=${id}`, {
       method: "DELETE",
     });
@@ -74,19 +70,22 @@ export function usePriorities() {
   };
 
   const toggleComplete = async (taskId: string, currentCompleted: boolean) => {
+    // If marking as completed, optimistically remove it from active list immediately
+    if (!currentCompleted) {
+      mutate((current) => (current || []).filter((t) => t.id !== taskId), false);
+    }
+
     const res = await fetch(`/api/v1/priorities/${taskId}/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: !currentCompleted }),
     });
-    // Wait, the API route for complete is /api/v1/priorities/[id]/complete/route.ts
-    // Let me check if that route exists! Yes, from my file listing:
-    // `src/app/api/v1/priorities/[id]/complete/route.ts`
+
     if (res.ok) {
       mutate();
     } else {
-      // Fallback if that route doesn't work
-      editTask(taskId, { completed: !currentCompleted, completed_at: !currentCompleted ? new Date().toISOString() : undefined });
+      // Fallback
+      await editTask(taskId, { completed: !currentCompleted, completed_at: !currentCompleted ? new Date().toISOString() : undefined });
     }
   };
 

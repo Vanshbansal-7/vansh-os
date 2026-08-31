@@ -19,18 +19,19 @@ export async function PATCH(
   }
 
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      // For non-auth'd users (founder code), return success optimistically
-      return NextResponse.json({ success: true, data: { id, completed: true } });
+    let userId: string | undefined;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    } catch {
+      // Unauthenticated / Founder mode
     }
 
     const body = await request.json().catch(() => ({}));
     const completed = typeof body.completed === 'boolean' ? body.completed : true;
 
-    const ok = await tasksService.toggleComplete(id, user.id, completed);
+    const ok = await tasksService.toggleComplete(id, userId, completed);
 
     if (!ok) {
       return NextResponse.json(
@@ -40,11 +41,18 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, data: { id, completed } });
-  } catch (err) {
+  } catch (err: any) {
     logger.error('PATCH /api/v1/priorities/[id]/complete failed', { requestId, err });
     return NextResponse.json(
-      { success: false, error: { message: 'Server error', code: 'SERVER_ERROR' } },
+      { success: false, error: { message: err?.message || 'Server error', code: 'SERVER_ERROR' } },
       { status: 500 }
     );
   }
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return PATCH(request, context);
 }

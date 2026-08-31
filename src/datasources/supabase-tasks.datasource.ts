@@ -1,64 +1,62 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { DailyTask, PriorityLevel } from '@/types/dashboard';
-
-const SEED_TASKS: Omit<DailyTask, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = [
-  { title: 'Amazon OA Deadline', subtitle: '2 Days Left', category: 'Career', priority_level: 'HIGH', completed: false, due_date: new Date().toISOString().split('T')[0], source: 'manual', is_active: true },
-  { title: 'DSA Daily Goal', subtitle: '3 / 3 Questions', category: 'Study', priority_level: 'MEDIUM', completed: true, due_date: new Date().toISOString().split('T')[0], source: 'manual', is_active: true },
-  { title: 'System Design', subtitle: 'Study 1 Topic', category: 'Study', priority_level: 'MEDIUM', completed: false, due_date: new Date().toISOString().split('T')[0], source: 'manual', is_active: true },
-  { title: 'Core Subject Revision', subtitle: 'Complete OS Unit 4', category: 'Study', priority_level: 'MEDIUM', completed: false, due_date: new Date().toISOString().split('T')[0], source: 'manual', is_active: true },
-  { title: 'Health Goal', subtitle: 'Drink 3L Water', category: 'Health', priority_level: 'LOW', completed: false, due_date: new Date().toISOString().split('T')[0], source: 'manual', is_active: true },
-];
-
-function makeSeedTasks(): DailyTask[] {
-  return SEED_TASKS.map((t, idx) => ({
-    ...t,
-    id: `seed-task-${idx}`,
-    user_id: 'anonymous',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }));
-}
+import { DailyTask } from '@/types/dashboard';
 
 export class SupabaseTasksDatasource {
+  private getSupabase() {
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://otjslotfiiubgehiucmn.supabase.co',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_e9C8vUd9Xnwk6DZIEJOQLw_0x4pwPWk'
+    );
+  }
+
   async getTodaysTasks(userId?: string): Promise<DailyTask[]> {
-    if (!userId) return makeSeedTasks();
-
-    const today = new Date().toISOString().split('T')[0];
-
     try {
-      const supabase = await createClient();
-      const { data, error } = await supabase
+      const supabase = this.getSupabase();
+      let query = supabase
         .from('daily_tasks')
         .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .eq('due_date', today)
-        .order('priority_level', { ascending: true })
-        .order('created_at', { ascending: true });
+        .eq('is_active', true);
 
-      if (!error && data && data.length > 0) {
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query
+        .order('priority_level', { ascending: true })
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        logger.error('Failed to fetch tasks from DB', { error });
+      }
+
+      if (!error && data) {
         return data as DailyTask[];
       }
     } catch (err) {
-      logger.warn('Failed to fetch tasks from DB, using seed', { err });
+      logger.error('Failed to fetch tasks from DB exception', { err });
     }
 
-    return makeSeedTasks();
+    return [];
   }
 
-  async toggleTaskComplete(taskId: string, userId: string, completed: boolean): Promise<boolean> {
+  async toggleTaskComplete(taskId: string, userId?: string, completed: boolean = true): Promise<boolean> {
     try {
-      const supabase = await createClient();
-      const { error } = await supabase
+      const supabase = this.getSupabase();
+      let query = supabase
         .from('daily_tasks')
         .update({
           completed,
           completed_at: completed ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', taskId)
-        .eq('user_id', userId);
+        .eq('id', taskId);
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { error } = await query;
 
       if (!error) return true;
       logger.error('Failed to toggle task', { taskId, error });
@@ -68,15 +66,27 @@ export class SupabaseTasksDatasource {
     return false;
   }
 
-  async createTask(task: Partial<DailyTask>, userId: string): Promise<DailyTask | null> {
+  async createTask(task: Partial<DailyTask>, userId?: string): Promise<DailyTask | null> {
     try {
-      const supabase = await createClient();
-      const newTask = {
-        ...task,
-        user_id: userId,
+      const supabase = this.getSupabase();
+      const newTask: any = {
+        title: task.title,
+        subtitle: task.subtitle || null,
+        category: task.category || 'General',
+        priority_level: task.priority_level || 'MEDIUM',
+        completed: task.completed || false,
+        completed_at: task.completed_at || null,
+        deadline: task.deadline || null,
+        due_date: task.due_date || new Date().toISOString().split('T')[0],
+        source: task.source || 'manual',
+        is_active: task.is_active !== undefined ? task.is_active : true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+
+      if (userId) {
+        newTask.user_id = userId;
+      }
       
       const { data, error } = await supabase
         .from('daily_tasks')
@@ -84,22 +94,32 @@ export class SupabaseTasksDatasource {
         .select()
         .single();
         
-      if (!error && data) return data as DailyTask;
-      logger.error('Failed to create task', { error });
+      if (error) {
+        logger.error('Failed to create task', { error, newTask });
+        throw new Error(error.message);
+      }
+
+      if (data) return data as DailyTask;
     } catch (err) {
       logger.error('Create task exception', { err });
+      throw err;
     }
     return null;
   }
 
-  async editTask(taskId: string, userId: string, updates: Partial<DailyTask>): Promise<boolean> {
+  async editTask(taskId: string, userId?: string, updates?: Partial<DailyTask>): Promise<boolean> {
     try {
-      const supabase = await createClient();
-      const { error } = await supabase
+      const supabase = this.getSupabase();
+      let query = supabase
         .from('daily_tasks')
         .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', taskId)
-        .eq('user_id', userId);
+        .eq('id', taskId);
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { error } = await query;
 
       if (!error) return true;
       logger.error('Failed to edit task', { taskId, error });
@@ -109,14 +129,19 @@ export class SupabaseTasksDatasource {
     return false;
   }
 
-  async deleteTask(taskId: string, userId: string): Promise<boolean> {
+  async deleteTask(taskId: string, userId?: string): Promise<boolean> {
     try {
-      const supabase = await createClient();
-      const { error } = await supabase
+      const supabase = this.getSupabase();
+      let query = supabase
         .from('daily_tasks')
         .delete()
-        .eq('id', taskId)
-        .eq('user_id', userId);
+        .eq('id', taskId);
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { error } = await query;
 
       if (!error) return true;
       logger.error('Failed to delete task', { taskId, error });

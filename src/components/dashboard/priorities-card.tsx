@@ -107,8 +107,8 @@ export function PrioritiesCard() {
             Today&apos;s Priorities
           </h3>
           {tasks.length > 0 && (
-            <span className="text-[11px] font-semibold text-slate-400 bg-white/5 px-2 py-0.5 rounded-full">
-              {tasks.filter((t) => t.completed).length} / {tasks.length} done
+            <span className="text-[11px] font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+              {tasks.length} active
             </span>
           )}
         </div>
