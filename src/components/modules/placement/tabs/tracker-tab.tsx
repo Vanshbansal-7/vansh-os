@@ -21,6 +21,8 @@ export function TrackerTab() {
     renameSubject,
     deleteSubject,
     addTopic,
+    addModule,
+    deleteModule,
     deleteTopic,
     renameTopic,
   } = usePlacementTracker();
@@ -38,8 +40,6 @@ export function TrackerTab() {
           await addSubject(subj.name, subj.description);
         }}
       />
-
-
 
       {subjects.length === 0 ? (
         <EmptyState
@@ -73,11 +73,13 @@ export function TrackerTab() {
               onDeleteSubject={deleteSubject}
             />
 
-            {/* Right Side: Topics Table */}
+            {/* Right Side: Topics Table with Modules */}
             <TopicTable
               subject={selectedSubject}
               onToggleMilestone={toggleMilestone}
               onAddTopic={addTopic}
+              onAddModule={addModule}
+              onDeleteModule={deleteModule}
               onRenameTopic={renameTopic}
               onDeleteTopic={deleteTopic}
             />

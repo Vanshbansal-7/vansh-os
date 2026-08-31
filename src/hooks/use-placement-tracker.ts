@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import useSWR from "swr";
-import { PlacementSubject, PlacementMilestone } from "@/types/placement";
+import { PlacementSubject, PlacementMilestone, PlacementTopic, PlacementModuleGroup } from "@/types/placement";
 
 const fetcher = async (url: string): Promise<PlacementSubject[]> => {
   const res = await fetch(url);
@@ -19,7 +19,7 @@ export function usePlacementTracker() {
   const { data, isLoading, error: swrError, mutate } = useSWR<PlacementSubject[]>(
     "/api/v1/tracker/subjects?module=PLACEMENT",
     fetcher,
-    { revalidateOnFocus: true, dedupingInterval: 5_000 }
+    { revalidateOnFocus: true, dedupingInterval: 3_000 }
   );
 
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
@@ -29,15 +29,18 @@ export function usePlacementTracker() {
 
   const subjects = useMemo(() => {
     return (data || []).map((s: any) => {
-      const topicList = (s.topics || []).map((t: any) => ({
+      const rawTopics = (s.topics || []).map((t: any) => ({
         ...t,
-        title: t.title || t.name || "Untitled Topic",
+        title: t.title || t.name || "Untitled Video",
+        module_name: (t.description || t.module_name || "General").trim(),
       }));
 
+      // Group topics by Module
+      const moduleMap = new Map<string, PlacementTopic[]>();
       let fullyCompletedTopics = 0;
       let completedMilestones = 0;
 
-      topicList.forEach((t: any) => {
+      rawTopics.forEach((t: any) => {
         let currentMilestones = 0;
         if (t.is_learned) currentMilestones++;
         if (t.is_practiced) currentMilestones++;
@@ -46,19 +49,49 @@ export function usePlacementTracker() {
 
         completedMilestones += currentMilestones;
         if (currentMilestones === 4) fullyCompletedTopics++;
+
+        const modName = t.module_name || "General";
+        if (!moduleMap.has(modName)) {
+          moduleMap.set(modName, []);
+        }
+        moduleMap.get(modName)!.push({
+          ...t,
+          completed_milestones: currentMilestones,
+          total_milestones: 4,
+          progress: Math.round((currentMilestones / 4) * 100),
+        });
       });
 
-      const totalPossible = topicList.length * 4;
+      const modules: PlacementModuleGroup[] = Array.from(moduleMap.entries()).map(
+        ([name, topicList]) => {
+          let modCompleted = 0;
+          topicList.forEach((tp) => {
+            if (tp.completed_milestones === 4) modCompleted++;
+          });
+          const modTotal = topicList.length * 4;
+          const modEarned = topicList.reduce((acc, tp) => acc + tp.completed_milestones, 0);
+          return {
+            name,
+            topics: topicList,
+            total_topics: topicList.length,
+            completed_topics: modCompleted,
+            progress: modTotal > 0 ? Math.round((modEarned / modTotal) * 100) : 0,
+          };
+        }
+      );
+
+      const totalPossible = rawTopics.length * 4;
       const progress = totalPossible > 0 ? Math.round((completedMilestones / totalPossible) * 100) : 0;
 
       return {
         ...s,
         title: s.title || s.name || "Untitled Subject",
-        folder: s.description?.trim() || "Uncategorized",
-        topics: topicList,
+        topics: rawTopics,
+        modules,
         completedMilestones,
         fullyCompletedTopics,
-        totalPossibleMilestones: totalPossible,
+        total_topics: rawTopics.length,
+        completed_topics: fullyCompletedTopics,
         progress,
       };
     });
@@ -142,17 +175,22 @@ export function usePlacementTracker() {
     await mutate();
   };
 
-  const addTopic = async (subjectId: string, name: string) => {
+  const addTopic = async (subjectId: string, name: string, moduleName?: string) => {
     const res = await fetch("/api/v1/tracker/topics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject_id: subjectId, name }),
+      body: JSON.stringify({ subject_id: subjectId, name, description: moduleName || "General" }),
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
       throw new Error(json?.error?.message || "Database insert failed for topic");
     }
     await mutate();
+  };
+
+  const addModule = async (subjectId: string, moduleName: string) => {
+    // Create first topic in this new module
+    await addTopic(subjectId, `1. Introduction to ${moduleName}`, moduleName);
   };
 
   const deleteTopic = async (subjectId: string, topicId: string) => {
@@ -177,6 +215,18 @@ export function usePlacementTracker() {
     await mutate();
   };
 
+  const deleteModule = async (subjectId: string, moduleName: string) => {
+    const targetSubj = subjects.find((s: any) => s.id === subjectId);
+    const topicsInModule = (targetSubj?.topics || []).filter(
+      (t: any) => (t.module_name || t.description) === moduleName
+    );
+
+    for (const t of topicsInModule) {
+      await fetch(`/api/v1/tracker/topics?id=${t.id}`, { method: "DELETE" });
+    }
+    await mutate();
+  };
+
   return {
     subjects,
     selectedSubjectId,
@@ -191,6 +241,8 @@ export function usePlacementTracker() {
     deleteSubject,
     renameSubject,
     addTopic,
+    addModule,
+    deleteModule,
     deleteTopic,
     renameTopic,
     isAddingSubject,
@@ -200,3 +252,4 @@ export function usePlacementTracker() {
     stats,
   };
 }
+

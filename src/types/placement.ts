@@ -5,6 +5,7 @@ export interface PlacementTopic {
   subject_id: string;
   code: string;
   title: string;
+  module_name: string; // The folder/module name, e.g. "Module 01: Print Star Pattern"
   order_index: number;
   is_learned: boolean;
   is_practiced: boolean;
@@ -13,6 +14,14 @@ export interface PlacementTopic {
   completed_milestones: number;
   total_milestones: 4;
   progress: number; // 0 | 25 | 50 | 75 | 100
+}
+
+export interface PlacementModuleGroup {
+  name: string;
+  topics: PlacementTopic[];
+  total_topics: number;
+  completed_topics: number;
+  progress: number;
 }
 
 export interface PlacementSubject {
@@ -25,6 +34,7 @@ export interface PlacementSubject {
   completed_topics: number;
   progress: number;
   topics: PlacementTopic[];
+  modules?: PlacementModuleGroup[];
 }
 
 export interface PlacementResource {
@@ -42,3 +52,4 @@ export interface PlacementResource {
 }
 
 export type PlacementTabId = 'tracker' | 'resources';
+
