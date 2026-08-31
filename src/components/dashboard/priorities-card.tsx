@@ -154,7 +154,7 @@ export function PrioritiesCard() {
                     <div className="flex flex-col min-w-0">
                       <span
                         className={`text-[13px] font-bold text-white leading-tight truncate transition-colors ${
-                          item.completed ? "line-through text-slate-500 opacity-60" : ""
+                          item.completed ? "line-through decoration-2 decoration-slate-400 text-slate-400" : ""
                         }`}
                       >
                         {item.title}
