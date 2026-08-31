@@ -10,11 +10,11 @@ export async function GET() {
   try {
     await client.connect();
     
-    const checkRes = await client.query(\SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_timetable');\);
+    const checkRes = await client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_timetable');");
     const exists = checkRes.rows[0].exists;
     
     if (exists) {
-      const cols = await client.query(\SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'daily_timetable'\);
+      const cols = await client.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'daily_timetable'");
       await client.end();
       return NextResponse.json({ message: 'Table already exists', columns: cols.rows });
     }
@@ -22,7 +22,7 @@ export async function GET() {
     const sql = fs.readFileSync(path.join(process.cwd(), 'supabase', 'migrations', '00003_phase4_dashboard.sql'), 'utf-8');
     await client.query(sql);
     
-    const verifyCols = await client.query(\SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'daily_timetable'\);
+    const verifyCols = await client.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'daily_timetable'");
     await client.end();
     
     return NextResponse.json({ message: 'Migration applied successfully', columns: verifyCols.rows });
