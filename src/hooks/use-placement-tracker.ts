@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { PlacementSubject, PlacementMilestone, PlacementTopic, PlacementModuleGroup } from "@/types/placement";
 
@@ -35,6 +36,7 @@ function getTopicOrder(t: any): number {
 }
 
 export function usePlacementTracker() {
+  const searchParams = useSearchParams();
   const { data, isLoading, error: swrError, mutate } = useSWR<PlacementSubject[]>(
     "/api/v1/tracker/subjects?module=PLACEMENT",
     fetcher,
@@ -46,6 +48,15 @@ export function usePlacementTracker() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [isAddingSubject, setIsAddingSubject] = useState(false);
+
+  // Sync URL search params with active module & subject
+  useEffect(() => {
+    if (!searchParams) return;
+    const urlModule = searchParams.get("module");
+    const urlSubjectId = searchParams.get("subjectId");
+    if (urlModule) setSelectedModuleName(urlModule);
+    if (urlSubjectId) setSelectedSubjectId(urlSubjectId);
+  }, [searchParams]);
 
   const subjects = useMemo(() => {
     return (data || []).map((s: any) => {

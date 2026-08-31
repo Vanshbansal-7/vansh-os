@@ -52,12 +52,9 @@ export function TopHeader() {
             type="text"
             readOnly
             onClick={() => {
-              // Trigger ⌘ K modal event
-              window.dispatchEvent(
-                new KeyboardEvent("keydown", { key: "k", metaKey: true })
-              );
+              window.dispatchEvent(new CustomEvent("open-universal-search"));
             }}
-            placeholder="Search anything... ( ⌘ K )"
+            placeholder="Search anything... ( ⌘ K or / )"
             className="w-full h-9 pl-9 pr-4 rounded-xl bg-[#101320] border border-white/[0.08] text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500/50 transition-all shadow-sm cursor-pointer"
           />
         </div>

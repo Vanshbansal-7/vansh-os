@@ -40,7 +40,11 @@ export default function PlacementModulePage() {
 
       {/* 4. Tab Content Area */}
       <div className="w-full mt-1">
-        {activeTab === "tracker" && <TrackerTab />}
+        {activeTab === "tracker" && (
+          <React.Suspense fallback={<div className="p-8 text-center text-slate-500 text-xs">Loading tracker...</div>}>
+            <TrackerTab />
+          </React.Suspense>
+        )}
         {activeTab === "resources" && <ResourcesTab />}
       </div>
     </div>

@@ -37,47 +37,68 @@ export function UniversalSearchModal() {
   const router = useRouter();
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Complete VOS Master Static Search Index
+  // Complete VOS Master Static Search Index (Functions, Pages, Modules & Options)
   const staticIndex: SearchResultItem[] = [
+    // Core Modules & Pages
     { id: "nav-1", title: "Vijaypath Dashboard", subtitle: "Founder Command Center • Live Timetable & Priorities", category: "Module", url: "/" },
-    { id: "nav-2", title: "Companies ATS", subtitle: "Personal ATS • Applications, Status & Documents", category: "Company", url: "/companies" },
-    { id: "nav-3", title: "Placement Module", subtitle: "Placement Prep • 4-Milestone Check System", category: "Placement", url: "/modules/placement" },
-    { id: "nav-4", title: "Exams Command Center", subtitle: "Exam Hub • AFCAT, Navy SSC, CDS, SSC CGL, CHSL", category: "Exam", url: "/modules/exams" },
-    { id: "nav-5", title: "AFCAT 02/2026 Workspace", subtitle: "Exams • Air Force Common Admission Test", category: "Exam", url: "/modules/exams/afcat" },
-    { id: "nav-6", title: "Navy SSC IT 2026 Workspace", subtitle: "Exams • Indian Navy Short Service Commission", category: "Exam", url: "/modules/exams/navy-ssc" },
-    { id: "nav-7", title: "CDS 02/2026 Strategy", subtitle: "Exams • Combined Defence Services", category: "Exam", url: "/modules/exams/cds" },
-    { id: "nav-8", title: "SSC CGL 2026 Tier I/II", subtitle: "CGL • Combined Graduate Level", category: "Exam", url: "/modules/cgl" },
-    { id: "nav-9", title: "SSC CHSL 2026 Hub", subtitle: "Exams • Combined Higher Secondary Level", category: "Exam", url: "/modules/exams/chsl" },
-    { id: "nav-10", title: "IB ACIO Grade II 2026", subtitle: "Exams • Intelligence Bureau Executive", category: "Exam", url: "/modules/exams/ib-acio" },
-    { id: "nav-11", title: "YouTube Creator Workspace", subtitle: "Channel Management & Video Production", category: "YouTube", url: "/modules/youtube" },
-    { id: "nav-12", title: "YouTube Content Vault", subtitle: "Creator Workspace • Presets, B-roll & Sound Effects", category: "YouTube", url: "/modules/youtube" },
-    { id: "nav-13", title: "YouTube Production Tracker", subtitle: "Creator Workspace • 4-Stage Video Creation Checklist", category: "YouTube", url: "/modules/youtube" },
-    { id: "nav-14", title: "Documents Vault", subtitle: "Digital Asset Management • File Storage & Folders", category: "Document", url: "/documents" },
-    { id: "nav-15", title: "Study Materials Folder", subtitle: "Documents Vault • 128 Items", category: "Folder", url: "/documents" },
-    { id: "nav-16", title: "Placement Folder", subtitle: "Documents Vault • 64 Items", category: "Folder", url: "/documents" },
-    { id: "nav-17", title: "Projects Folder", subtitle: "Documents Vault • 37 Items", category: "Folder", url: "/documents" },
-    { id: "nav-18", title: "Streak Command Center", subtitle: "Founder Consistency & Check-in Heatmap", category: "Module", url: "/streak" },
-    { id: "nav-19", title: "Analytics & Telemetry", subtitle: "System Metrics & Activity Log", category: "Module", url: "/analytics" },
-    { id: "nav-20", title: "Calendar & Schedule", subtitle: "Timeblocks & Upcoming Deadlines", category: "Module", url: "/calendar" },
-    { id: "nav-21", title: "System Settings", subtitle: "Vansh OS Configuration & Security", category: "Module", url: "/system" },
+    { id: "nav-2", title: "Placement & DSA Preparation", subtitle: "Placement Roadmap • 48 Modules, 518 Videos & Milestones", category: "Placement", url: "/modules/placement" },
+    { id: "nav-3", title: "Companies ATS & Applications", subtitle: "Personal ATS • Applications, Stages, Salaries & Docs", category: "Company", url: "/companies" },
+    { id: "nav-4", title: "Documents Vault & Resumes", subtitle: "Digital Asset Storage • Folders, Resumes & Media", category: "Document", url: "/documents" },
+    { id: "nav-5", title: "Exams Command Center", subtitle: "Exam Hub • AFCAT, Navy SSC, CDS, SSC CGL, CHSL, IB ACIO", category: "Exam", url: "/modules/exams" },
+    { id: "nav-6", title: "SSC CGL 2026 Strategy Workspace", subtitle: "CGL Tier I & II Preparation Tracker & Resources", category: "Exam", url: "/modules/cgl" },
+    { id: "nav-7", title: "AFCAT 02/2026 Strategy Hub", subtitle: "Air Force Common Admission Test Workspace", category: "Exam", url: "/modules/exams/afcat" },
+    { id: "nav-8", title: "Navy SSC IT 2026 Workspace", subtitle: "Indian Navy Short Service Commission Hub", category: "Exam", url: "/modules/exams/navy-ssc" },
+    { id: "nav-9", title: "CDS 02/2026 Strategy Hub", subtitle: "Combined Defence Services Workspace", category: "Exam", url: "/modules/exams/cds" },
+    { id: "nav-10", title: "SSC CHSL 2026 Workspace", subtitle: "Combined Higher Secondary Level Hub", category: "Exam", url: "/modules/exams/chsl" },
+    { id: "nav-11", title: "IB ACIO Grade II 2026", subtitle: "Intelligence Bureau Executive Workspace", category: "Exam", url: "/modules/exams/ib-acio" },
+    { id: "nav-12", title: "YouTube Creator Hub", subtitle: "Video Production Pipeline & Channel Analytics", category: "YouTube", url: "/modules/youtube" },
+    { id: "nav-13", title: "YouTube Content Vault", subtitle: "Presets, B-Rolls, Sound Effects & Stock Assets", category: "YouTube", url: "/modules/youtube" },
+    { id: "nav-14", title: "YouTube Production Tracker", subtitle: "4-Stage Video Creation Workflow & Checklist", category: "YouTube", url: "/modules/youtube" },
+    { id: "nav-15", title: "Streak Command Center", subtitle: "Founder Daily Consistency & Activity Heatmap", category: "Module", url: "/streak" },
+    { id: "nav-16", title: "Daily Timetable & Schedule", subtitle: "Timeblocks, Routines & Study Timetable", category: "Module", url: "/calendar" },
+    { id: "nav-17", title: "System Settings & Configuration", subtitle: "Security, Database Sync & App Preferences", category: "Module", url: "/system" },
+    { id: "nav-18", title: "Analytics & Telemetry", subtitle: "Deep Productivity Analytics & System Stats", category: "Module", url: "/analytics" },
+
+    // Direct Action & Function Shortcuts
+    { id: "act-1", title: "Add New Subject or Module", subtitle: "Placement Tracker • Create New Subject / Folder", category: "Placement", url: "/modules/placement" },
+    { id: "act-2", title: "Add Job Application / Company", subtitle: "Companies ATS • Track New Applied Company", category: "Company", url: "/companies" },
+    { id: "act-3", title: "Upload New Document / Resume", subtitle: "Documents Vault • Upload PDF, Docs or Media", category: "Document", url: "/documents" },
+    { id: "act-4", title: "View Daily Gita Shlok & Wisdom", subtitle: "Dashboard • 24-Hour Rotating Shlok Card", category: "Module", url: "/" },
+    { id: "act-5", title: "Today's Priorities & Tasks", subtitle: "Dashboard • Critical Tasks Checklist", category: "Priority", url: "/" },
   ];
 
-  // Global Keyboard Listener for ⌘/Ctrl K
+  // Listen for ⌘/Ctrl K, Slash (/), and custom event 'open-universal-search'
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Supports both Windows (Ctrl) and Mac (Cmd)
+      // Ignore if active element is an editable input or textarea
+      const isInput =
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA" ||
+        (document.activeElement as HTMLElement)?.isContentEditable;
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsOpen((prev) => !prev);
-      }
-      if (e.key === "Escape") {
+      } else if (e.key === "/" && !isInput && !isOpen) {
+        e.preventDefault();
+        setIsOpen(true);
+      } else if (e.key === "Escape") {
         setIsOpen(false);
       }
     };
 
+    const handleCustomOpen = () => {
+      setIsOpen(true);
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    window.addEventListener("open-universal-search", handleCustomOpen);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-universal-search", handleCustomOpen);
+    };
+  }, [isOpen]);
 
   // Filter & Search Engine
   useEffect(() => {
@@ -86,13 +107,13 @@ export function UniversalSearchModal() {
     }
 
     if (!query.trim()) {
-      setResults(staticIndex.slice(0, 6));
+      setResults(staticIndex.slice(0, 8));
       setIsSearching(false);
       return;
     }
 
     const trimmedQuery = query.trim().toLowerCase();
-    
+
     // 1. Instantly filter static results
     const filteredStatic = staticIndex.filter(
       (item) =>
@@ -101,7 +122,7 @@ export function UniversalSearchModal() {
         item.category.toLowerCase().includes(trimmedQuery)
     );
 
-    // If query is short, don't hit backend yet
+    // If query is 1 character, show filtered static
     if (trimmedQuery.length < 2) {
       setResults(filteredStatic);
       setIsSearching(false);
@@ -110,17 +131,17 @@ export function UniversalSearchModal() {
 
     // 2. Deep backend search with debounce
     setIsSearching(true);
-    setResults(filteredStatic); // show static immediately while loading
+    setResults(filteredStatic); // show instant local matches while querying DB
 
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/v1/search?q=${encodeURIComponent(trimmedQuery)}`);
         if (res.ok) {
           const dynamicResults: SearchResultItem[] = await res.json();
-          // Merge static + dynamic, removing duplicates by ID just in case
+          // Merge static + dynamic, removing duplicate IDs
           const merged = [...filteredStatic, ...dynamicResults];
           const uniqueIds = new Set();
-          const finalResults = merged.filter(item => {
+          const finalResults = merged.filter((item) => {
             if (uniqueIds.has(item.id)) return false;
             uniqueIds.add(item.id);
             return true;
@@ -128,19 +149,20 @@ export function UniversalSearchModal() {
           setResults(finalResults);
         }
       } catch (err) {
-        console.error("Deep search failed", err);
+        console.error("Deep search failed:", err);
       } finally {
         setIsSearching(false);
         setSelectedIndex(0);
       }
-    }, 400);
-
+    }, 300);
   }, [query]);
 
   const handleSelect = (item: SearchResultItem) => {
     setIsOpen(false);
     setQuery("");
-    router.push(item.url);
+    if (item.url) {
+      router.push(item.url);
+    }
   };
 
   const handleKeyDownInModal = (e: React.KeyboardEvent) => {
@@ -161,7 +183,7 @@ export function UniversalSearchModal() {
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
       case "Company":
-        return <Building2 className="w-4 h-4 text-purple-400" />;
+        return <Building2 className="w-4 h-4 text-cyan-400" />;
       case "Document":
         return <FileText className="w-4 h-4 text-blue-400" />;
       case "Folder":
@@ -171,12 +193,14 @@ export function UniversalSearchModal() {
       case "YouTube":
         return <Play className="w-4 h-4 text-rose-400 fill-rose-400/20" />;
       case "Placement":
-        return <Target className="w-4 h-4 text-indigo-400" />;
+        return <Target className="w-4 h-4 text-purple-400" />;
       case "Topic":
-        return <Target className="w-4 h-4 text-amber-500" />;
+        return <Target className="w-4 h-4 text-amber-400" />;
+      case "Priority":
+        return <Flame className="w-4 h-4 text-orange-400" />;
       case "Module":
       default:
-        return <BarChart3 className="w-4 h-4 text-amber-400" />;
+        return <BarChart3 className="w-4 h-4 text-indigo-400" />;
     }
   };
 
