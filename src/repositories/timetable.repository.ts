@@ -6,7 +6,7 @@ export class TimetableRepository {
     return supabaseTimetableDatasource.getTodaysTimetable(userId);
   }
 
-  async createEntry(entry: Partial<TimetableEntry>, userId: string): Promise<TimetableEntry | null> {
+  async createEntry(entry: Partial<TimetableEntry>, userId?: string): Promise<TimetableEntry | null> {
     return supabaseTimetableDatasource.createEntry(entry, userId);
   }
 }

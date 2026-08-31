@@ -10,9 +10,14 @@ export async function GET() {
   logger.info('Handling GET /api/v1/timeline', { requestId });
 
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+    let userId: string | undefined;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    } catch {
+      // Unauthenticated / Founder mode
+    }
 
     const entries = await timetableService.getTodaysTimeline(userId);
 
@@ -21,10 +26,10 @@ export async function GET() {
       data: entries,
       meta: { count: entries.length, generated_at: new Date().toISOString() },
     });
-  } catch (err) {
+  } catch (err: any) {
     logger.error('GET /api/v1/timeline failed', { requestId, err });
     return NextResponse.json(
-      { success: false, error: { message: 'Failed to fetch timeline', code: 'TIMELINE_ERROR' } },
+      { success: false, error: { message: err?.message || 'Failed to fetch timeline', code: 'TIMELINE_ERROR' } },
       { status: 500 }
     );
   }
@@ -33,16 +38,21 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ success: false, error: { message: 'Unauthorized' } }, { status: 401 });
+    let userId: string | undefined;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    } catch {
+      // Unauthenticated / Founder mode
+    }
 
-    const entry = await timetableService.createEntry(body, user.id);
+    const entry = await timetableService.createEntry(body, userId);
     if (!entry) throw new Error("Failed to create timeline entry");
 
     return NextResponse.json({ success: true, data: entry });
-  } catch (err) {
+  } catch (err: any) {
     logger.error('POST /api/v1/timeline failed', { err });
-    return NextResponse.json({ success: false, error: { message: 'Failed to create timeline entry' } }, { status: 500 });
+    return NextResponse.json({ success: false, error: { message: err?.message || 'Failed to create timeline entry' } }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { TimetableEntry, TimetableStatus } from '@/types/dashboard';
 
@@ -31,20 +31,33 @@ function calcElapsed(startTime: string, currentTime: string): string {
 }
 
 export class SupabaseTimetableDatasource {
-  async getTodaysTimetable(userId?: string): Promise<TimetableEntry[]> {
-    if (!userId) return [];
+  private getSupabase() {
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://otjslotfiiubgehiucmn.supabase.co',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_e9C8vUd9Xnwk6DZIEJOQLw_0x4pwPWk'
+    );
+  }
 
+  async getTodaysTimetable(userId?: string): Promise<TimetableEntry[]> {
     const { timeStr, dayOfWeek } = getISTDateAndTime();
 
     try {
-      const supabase = await createClient();
-      const { data, error } = await supabase
+      const supabase = this.getSupabase();
+      let query = supabase
         .from('daily_timetable')
         .select('*')
-        .eq('user_id', userId)
         .eq('is_active', true)
-        .contains('day_of_week', [dayOfWeek])
-        .order('start_time', { ascending: true });
+        .contains('day_of_week', [dayOfWeek]);
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query.order('start_time', { ascending: true });
+
+      if (error) {
+        logger.error('Failed to fetch timetable from DB', { error });
+      }
 
       if (!error && data && data.length > 0) {
         return data.map((e: any) => ({
@@ -63,13 +76,18 @@ export class SupabaseTimetableDatasource {
     return [];
   }
 
-  async createEntry(entry: Partial<TimetableEntry>, userId: string): Promise<TimetableEntry | null> {
+  async createEntry(entry: Partial<TimetableEntry>, userId?: string): Promise<TimetableEntry | null> {
     try {
-      const supabase = await createClient();
-      const newEntry = {
+      const supabase = this.getSupabase();
+      const newEntry: any = {
         ...entry,
-        user_id: userId,
+        status: entry.status || 'upcoming',
+        is_active: entry.is_active !== undefined ? entry.is_active : true,
       };
+
+      if (userId) {
+        newEntry.user_id = userId;
+      }
 
       const { data, error } = await supabase
         .from('daily_timetable')
@@ -77,10 +95,15 @@ export class SupabaseTimetableDatasource {
         .select()
         .single();
 
-      if (!error && data) return data as TimetableEntry;
-      logger.error('Failed to create timeline entry', { error });
+      if (error) {
+        logger.error('Failed to create timeline entry', { error, newEntry });
+        throw new Error(error.message);
+      }
+
+      if (data) return data as TimetableEntry;
     } catch (err) {
       logger.error('Create timeline entry exception', { err });
+      throw err;
     }
     return null;
   }

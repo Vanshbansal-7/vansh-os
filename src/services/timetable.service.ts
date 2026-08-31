@@ -6,7 +6,7 @@ export class TimetableService {
     return timetableRepository.getTodaysTimetable(userId);
   }
 
-  async createEntry(entry: Partial<TimetableEntry>, userId: string): Promise<TimetableEntry | null> {
+  async createEntry(entry: Partial<TimetableEntry>, userId?: string): Promise<TimetableEntry | null> {
     return timetableRepository.createEntry(entry, userId);
   }
 }
