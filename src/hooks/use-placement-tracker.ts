@@ -15,6 +15,25 @@ const fetcher = async (url: string): Promise<PlacementSubject[]> => {
   return json.data;
 };
 
+function getModuleOrder(name: string): number {
+  const match = name.match(/Module\s*(\d+)/i);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  return 9999;
+}
+
+function getTopicOrder(t: any): number {
+  const match = (t.title || t.name || "").match(/^\s*(\d+)\./);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  if (typeof t.order_index === "number" && t.order_index > 0) {
+    return t.order_index;
+  }
+  return 9999;
+}
+
 export function usePlacementTracker() {
   const { data, isLoading, error: swrError, mutate } = useSWR<PlacementSubject[]>(
     "/api/v1/tracker/subjects?module=PLACEMENT",
@@ -48,6 +67,14 @@ export function usePlacementTracker() {
         };
       });
 
+      // Sort raw topics deterministically by order_index / numeric prefix
+      rawTopics.sort((a, b) => {
+        const orderA = getTopicOrder(a);
+        const orderB = getTopicOrder(b);
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.order_index || 0) - (b.order_index || 0);
+      });
+
       // Group topics by Module
       const moduleMap = new Map<string, PlacementTopic[]>();
       let fullyCompletedTopics = 0;
@@ -64,14 +91,24 @@ export function usePlacementTracker() {
         moduleMap.get(modName)!.push(t);
       });
 
-      const modules: PlacementModuleGroup[] = Array.from(moduleMap.entries()).map(
-        ([name, topicList]) => {
+      // Build and sort modules in FIXED numberwise order (Module 01, Module 02, ... Module 48)
+      const modules: PlacementModuleGroup[] = Array.from(moduleMap.entries())
+        .map(([name, topicList]) => {
+          // Sort topics within this module in fixed 1, 2, 3... order
+          topicList.sort((a, b) => {
+            const orderA = getTopicOrder(a);
+            const orderB = getTopicOrder(b);
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.order_index || 0) - (b.order_index || 0);
+          });
+
           let modCompleted = 0;
+          let modEarned = 0;
           topicList.forEach((tp) => {
+            modEarned += tp.completed_milestones;
             if (tp.completed_milestones === 4) modCompleted++;
           });
           const modTotal = topicList.length * 4;
-          const modEarned = topicList.reduce((acc, tp) => acc + tp.completed_milestones, 0);
           return {
             name,
             topics: topicList,
@@ -79,8 +116,13 @@ export function usePlacementTracker() {
             completed_topics: modCompleted,
             progress: modTotal > 0 ? Math.round((modEarned / modTotal) * 100) : 0,
           };
-        }
-      );
+        })
+        .sort((a, b) => {
+          const modOrderA = getModuleOrder(a.name);
+          const modOrderB = getModuleOrder(b.name);
+          if (modOrderA !== modOrderB) return modOrderA - modOrderB;
+          return a.name.localeCompare(b.name);
+        });
 
       const totalPossible = rawTopics.length * 4;
       const progress = totalPossible > 0 ? Math.round((completedMilestones / totalPossible) * 100) : 0;
