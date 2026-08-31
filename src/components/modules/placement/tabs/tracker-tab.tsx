@@ -14,7 +14,9 @@ export function TrackerTab() {
     subjects,
     selectedSubject,
     selectedSubjectId,
+    selectedModuleName,
     setSelectedSubjectId,
+    setSelectedModuleName,
     stats,
     toggleMilestone,
     addSubject,
@@ -63,19 +65,25 @@ export function TrackerTab() {
 
           {/* SECTION 2: Side-by-Side Placement Tracker */}
           <div className="flex flex-col lg:flex-row gap-4 items-start w-full">
-            {/* Left Side: Subjects List */}
+            {/* Left Side: Subjects & Modules Tree List */}
             <SubjectSidebar
               subjects={subjects}
               selectedSubjectId={selectedSubjectId}
+              selectedModuleName={selectedModuleName}
               onSelectSubject={setSelectedSubjectId}
+              onSelectModule={setSelectedModuleName}
               onAddSubject={() => setIsAddSubjectModalOpen(true)}
+              onAddModule={addModule}
+              onDeleteModule={deleteModule}
               onRenameSubject={renameSubject}
               onDeleteSubject={deleteSubject}
             />
 
-            {/* Right Side: Topics Table with Modules */}
+            {/* Right Side: Topics Table for Selected Module */}
             <TopicTable
               subject={selectedSubject}
+              selectedModuleName={selectedModuleName}
+              onSelectModule={setSelectedModuleName}
               onToggleMilestone={toggleMilestone}
               onAddTopic={addTopic}
               onAddModule={addModule}

@@ -23,6 +23,7 @@ export function usePlacementTracker() {
   );
 
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+  const [selectedModuleName, setSelectedModuleName] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [isAddingSubject, setIsAddingSubject] = useState(false);
@@ -118,6 +119,14 @@ export function usePlacementTracker() {
     return subjects.find((s: any) => s.id === selectedSubjectId) || subjects[0] || null;
   }, [subjects, selectedSubjectId]);
 
+  const selectedModule = useMemo(() => {
+    if (!selectedSubject || !selectedSubject.modules || selectedSubject.modules.length === 0) return null;
+    if (selectedModuleName) {
+      return selectedSubject.modules.find((m: PlacementModuleGroup) => m.name === selectedModuleName) || selectedSubject.modules[0];
+    }
+    return selectedSubject.modules[0];
+  }, [selectedSubject, selectedModuleName]);
+
   const handleToggleMilestone = useCallback(
     async (subjectId: string, topicId: string, milestone: PlacementMilestone) => {
       const targetSubj = subjects.find((s: any) => s.id === subjectId);
@@ -179,7 +188,7 @@ export function usePlacementTracker() {
     const res = await fetch("/api/v1/tracker/topics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject_id: subjectId, name, description: moduleName || "General" }),
+      body: JSON.stringify({ subject_id: subjectId, name, description: moduleName || selectedModuleName || "General" }),
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
@@ -191,6 +200,7 @@ export function usePlacementTracker() {
   const addModule = async (subjectId: string, moduleName: string) => {
     // Create first topic in this new module
     await addTopic(subjectId, `1. Introduction to ${moduleName}`, moduleName);
+    setSelectedModuleName(moduleName);
   };
 
   const deleteTopic = async (subjectId: string, topicId: string) => {
@@ -231,7 +241,10 @@ export function usePlacementTracker() {
     subjects,
     selectedSubjectId,
     selectedSubject,
+    selectedModuleName,
+    selectedModule,
     setSelectedSubjectId,
+    setSelectedModuleName,
     searchQuery,
     setSearchQuery,
     activeFilter,
@@ -252,4 +265,5 @@ export function usePlacementTracker() {
     stats,
   };
 }
+
 
