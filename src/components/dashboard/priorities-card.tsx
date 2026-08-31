@@ -107,8 +107,8 @@ export function PrioritiesCard() {
             Today&apos;s Priorities
           </h3>
           {tasks.length > 0 && (
-            <span className="text-[11px] font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
-              {tasks.length} active
+            <span className="text-[11px] font-semibold text-slate-400 bg-white/5 px-2 py-0.5 rounded-full">
+              {tasks.filter((t) => t.completed).length} / {tasks.length} done
             </span>
           )}
         </div>
@@ -131,10 +131,11 @@ export function PrioritiesCard() {
             compact
           />
         ) : (
-          <div className="flex flex-col gap-2.5 flex-1 overflow-y-auto no-scrollbar">
-            {tasks.map((item: DailyTask) => {
+          <div className="flex flex-col gap-2.5 flex-1 overflow-y-auto no-scrollbar pb-2">
+            {tasks.map((item: DailyTask, idx: number) => {
               const Icon = getIcon(item.category);
               const isMenuOpen = activeMenuId === item.id;
+              const isNearBottom = idx >= Math.max(0, tasks.length - 2);
               
               return (
                 <div
@@ -180,7 +181,7 @@ export function PrioritiesCard() {
                     
                     <button 
                       onClick={() => toggleComplete(item.id, item.completed)}
-                      className="cursor-pointer"
+                      className="cursor-pointer p-0.5"
                     >
                       {item.completed ? (
                         <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-500/20 transition-transform hover:scale-110" />
@@ -195,7 +196,7 @@ export function PrioritiesCard() {
                           e.stopPropagation();
                           setActiveMenuId(isMenuOpen ? null : item.id);
                         }}
-                        className="p-1 rounded-md text-slate-500 hover:text-white hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
@@ -203,17 +204,27 @@ export function PrioritiesCard() {
                       {isMenuOpen && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-1 w-32 rounded-xl bg-[#1A1D2B] border border-white/10 shadow-xl z-50 overflow-hidden">
+                          <div 
+                            className={`absolute right-0 ${
+                              isNearBottom ? "bottom-full mb-1.5" : "top-full mt-1.5"
+                            } w-32 rounded-xl bg-[#1A1D2B] border border-white/10 shadow-2xl z-50 overflow-hidden py-1`}
+                          >
                             <button 
-                              onClick={() => openEditModal(item)}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-white/5 transition-colors text-left"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(item);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
                             >
                               <Edit2 className="w-3.5 h-3.5 text-blue-400" />
                               Edit
                             </button>
                             <button 
-                              onClick={() => handleDelete(item.id)}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-400/10 transition-colors text-left"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(item.id);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-400/10 transition-colors text-left cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               Delete

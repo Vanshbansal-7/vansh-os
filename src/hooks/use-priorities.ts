@@ -3,6 +3,8 @@
 import useSWR from "swr";
 import { DailyTask } from "@/types/dashboard";
 
+const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+
 const fetcher = async (url: string): Promise<DailyTask[]> => {
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch priorities");
@@ -11,19 +13,23 @@ const fetcher = async (url: string): Promise<DailyTask[]> => {
   
   const now = Date.now();
   const filtered = (json.data || []).filter((t: DailyTask) => {
-    // If marked as done/completed, automatically remove from active list
-    if (t.completed) return false;
-
-    // If deadline has ended (passed), automatically remove from active list
-    if (t.deadline) {
-      const deadlineTime = new Date(t.deadline).getTime();
-      if (!isNaN(deadlineTime) && now > deadlineTime) return false;
+    // If completed: keep in the list for 24 hours after completion
+    if (t.completed) {
+      if (!t.completed_at) return true; // Keep if just completed
+      const completedTime = new Date(t.completed_at).getTime();
+      if (isNaN(completedTime)) return true;
+      const hoursSinceCompletion = (now - completedTime) / (1000 * 60 * 60);
+      return hoursSinceCompletion <= 24; // Automatically removed after 24 hours
     }
 
     return true;
   });
 
-  return filtered;
+  // Sort: Incomplete tasks first (by Priority High -> Low), then completed tasks at the bottom
+  return filtered.sort((a: DailyTask, b: DailyTask) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return (PRIORITY_ORDER[a.priority_level] ?? 1) - (PRIORITY_ORDER[b.priority_level] ?? 1);
+  });
 };
 
 export function usePriorities() {
@@ -70,22 +76,35 @@ export function usePriorities() {
   };
 
   const toggleComplete = async (taskId: string, currentCompleted: boolean) => {
-    // If marking as completed, optimistically remove it from active list immediately
-    if (!currentCompleted) {
-      mutate((current) => (current || []).filter((t) => t.id !== taskId), false);
-    }
+    const nextCompleted = !currentCompleted;
+    const nextCompletedAt = nextCompleted ? new Date().toISOString() : undefined;
+
+    // Optimistically update the item state so it instantly crosses out
+    mutate((current) => {
+      if (!current) return [];
+      const updated = current.map((t) =>
+        t.id === taskId
+          ? { ...t, completed: nextCompleted, completed_at: nextCompletedAt }
+          : t
+      );
+      // Re-sort: incomplete first, completed at bottom
+      return [...updated].sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return (PRIORITY_ORDER[a.priority_level] ?? 1) - (PRIORITY_ORDER[b.priority_level] ?? 1);
+      });
+    }, false);
 
     const res = await fetch(`/api/v1/priorities/${taskId}/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: !currentCompleted }),
+      body: JSON.stringify({ completed: nextCompleted }),
     });
 
     if (res.ok) {
       mutate();
     } else {
       // Fallback
-      await editTask(taskId, { completed: !currentCompleted, completed_at: !currentCompleted ? new Date().toISOString() : undefined });
+      await editTask(taskId, { completed: nextCompleted, completed_at: nextCompletedAt });
     }
   };
 
