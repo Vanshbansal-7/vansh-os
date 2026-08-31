@@ -30,37 +30,38 @@ export function usePlacementTracker() {
 
   const subjects = useMemo(() => {
     return (data || []).map((s: any) => {
-      const rawTopics = (s.topics || []).map((t: any) => ({
-        ...t,
-        title: t.title || t.name || "Untitled Video",
-        module_name: (t.description || t.module_name || "General").trim(),
-      }));
-
-      // Group topics by Module
-      const moduleMap = new Map<string, PlacementTopic[]>();
-      let fullyCompletedTopics = 0;
-      let completedMilestones = 0;
-
-      rawTopics.forEach((t: any) => {
+      const rawTopics: PlacementTopic[] = (s.topics || []).map((t: any) => {
         let currentMilestones = 0;
         if (t.is_learned) currentMilestones++;
         if (t.is_practiced) currentMilestones++;
         if (t.is_revised) currentMilestones++;
         if (t.is_mastered) currentMilestones++;
 
-        completedMilestones += currentMilestones;
-        if (currentMilestones === 4) fullyCompletedTopics++;
+        return {
+          ...t,
+          title: t.title || t.name || "Untitled Video",
+          module_name: (t.description || t.module_name || "General").trim(),
+          duration: t.notes || t.duration || "",
+          completed_milestones: currentMilestones,
+          total_milestones: 4 as const,
+          progress: Math.round((currentMilestones / 4) * 100),
+        };
+      });
+
+      // Group topics by Module
+      const moduleMap = new Map<string, PlacementTopic[]>();
+      let fullyCompletedTopics = 0;
+      let completedMilestones = 0;
+
+      rawTopics.forEach((t) => {
+        completedMilestones += t.completed_milestones;
+        if (t.completed_milestones === 4) fullyCompletedTopics++;
 
         const modName = t.module_name || "General";
         if (!moduleMap.has(modName)) {
           moduleMap.set(modName, []);
         }
-        moduleMap.get(modName)!.push({
-          ...t,
-          completed_milestones: currentMilestones,
-          total_milestones: 4,
-          progress: Math.round((currentMilestones / 4) * 100),
-        });
+        moduleMap.get(modName)!.push(t);
       });
 
       const modules: PlacementModuleGroup[] = Array.from(moduleMap.entries()).map(
@@ -127,25 +128,47 @@ export function usePlacementTracker() {
     return selectedSubject.modules[0];
   }, [selectedSubject, selectedModuleName]);
 
+  // Instant Optimistic Milestone Toggle
   const handleToggleMilestone = useCallback(
     async (subjectId: string, topicId: string, milestone: PlacementMilestone) => {
-      const targetSubj = subjects.find((s: any) => s.id === subjectId);
+      const targetSubj = (data || []).find((s: any) => s.id === subjectId);
       const targetTopic = targetSubj?.topics?.find((t: any) => t.id === topicId);
       const currentValue = targetTopic ? targetTopic[milestone] : false;
       const newValue = !currentValue;
 
-      const res = await fetch("/api/v1/tracker/topics", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic_id: topicId, milestone, value: newValue }),
+      // Optimistic cache update
+      const optimisticSubjects = (data || []).map((s: any) => {
+        if (s.id !== subjectId) return s;
+        return {
+          ...s,
+          topics: (s.topics || []).map((t: any) => {
+            if (t.id !== topicId) return t;
+            return { ...t, [milestone]: newValue };
+          }),
+        };
       });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json?.error?.message || "Failed to update topic milestone in database");
-      }
-      await mutate();
+
+      await mutate(
+        async () => {
+          const res = await fetch("/api/v1/tracker/topics", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ topic_id: topicId, milestone, value: newValue }),
+          });
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            throw new Error(json?.error?.message || "Failed to update topic milestone in database");
+          }
+          return optimisticSubjects;
+        },
+        {
+          optimisticData: optimisticSubjects,
+          rollbackOnError: true,
+          revalidate: true,
+        }
+      );
     },
-    [subjects, mutate]
+    [data, mutate]
   );
 
   const addSubject = async (name: string, description?: string) => {
@@ -184,11 +207,16 @@ export function usePlacementTracker() {
     await mutate();
   };
 
-  const addTopic = async (subjectId: string, name: string, moduleName?: string) => {
+  const addTopic = async (subjectId: string, name: string, moduleName?: string, duration?: string) => {
     const res = await fetch("/api/v1/tracker/topics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject_id: subjectId, name, description: moduleName || selectedModuleName || "General" }),
+      body: JSON.stringify({
+        subject_id: subjectId,
+        name,
+        description: moduleName || selectedModuleName || "General",
+        notes: duration || "10:00",
+      }),
     });
     const json = await res.json();
     if (!res.ok || !json.success) {

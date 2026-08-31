@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Code,
   BookOpen,
@@ -51,20 +51,31 @@ export function SubjectSidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  
-  // Track open/collapsed chevron state for each subject (open by default)
-  const [openSubjectChevrons, setOpenSubjectChevrons] = useState<Record<string, boolean>>({
-    [selectedSubjectId || ""]: true,
-  });
 
-  // Modal / Inline input to create a Module in a subject
+  // Track open/collapsed chevron state for each subject (open by default for selected, closed for others or remembered)
+  const [openSubjectChevrons, setOpenSubjectChevrons] = useState<Record<string, boolean>>({});
+
+  // Inline input to create a Module in a subject
   const [addingModuleForSubjectId, setAddingModuleForSubjectId] = useState<string | null>(null);
   const [newModuleNameInput, setNewModuleNameInput] = useState("");
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // Close 3-dots menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleSubjectChevron = (subjectId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setOpenSubjectChevrons((prev) => {
-      const isCurrentlyOpen = prev[subjectId] !== undefined ? prev[subjectId] : true;
+      const isCurrentlyOpen = prev[subjectId] !== undefined ? prev[subjectId] : (subjectId === selectedSubjectId);
       return {
         ...prev,
         [subjectId]: !isCurrentlyOpen,
@@ -73,9 +84,11 @@ export function SubjectSidebar({
   };
 
   const isSubjectChevronOpen = (subjectId: string) => {
-    return openSubjectChevrons[subjectId] !== undefined
-      ? openSubjectChevrons[subjectId]
-      : true; // Default to open
+    if (openSubjectChevrons[subjectId] !== undefined) {
+      return openSubjectChevrons[subjectId];
+    }
+    // Default open for the selected subject or first subject
+    return subjectId === selectedSubjectId || subjects.length === 1;
   };
 
   const handleAddModuleSubmit = (subjectId: string, e: React.FormEvent) => {
@@ -84,7 +97,6 @@ export function SubjectSidebar({
       onAddModule(subjectId, newModuleNameInput.trim());
       setNewModuleNameInput("");
       setAddingModuleForSubjectId(null);
-      // Ensure chevron is open
       setOpenSubjectChevrons((prev) => ({ ...prev, [subjectId]: true }));
     }
   };
@@ -129,9 +141,9 @@ export function SubjectSidebar({
   };
 
   return (
-    <div className="w-full lg:w-[300px] shrink-0 rounded-2xl bg-[#10131E] border border-white/[0.08] p-3 flex flex-col gap-2 shadow-sm">
+    <div className="w-full lg:w-[310px] shrink-0 rounded-2xl bg-[#10131E] border border-white/[0.08] p-3.5 flex flex-col gap-2.5 shadow-sm h-[calc(100vh-230px)] min-h-[520px]">
       {/* Sidebar Header: Subjects title + Create button */}
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-white/[0.06] mb-1">
+      <div className="flex items-center justify-between px-1 py-1 border-b border-white/[0.06] pb-2.5">
         <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
           Subjects & Modules
         </span>
@@ -139,15 +151,15 @@ export function SubjectSidebar({
           onClick={() => onAddSubject("")}
           type="button"
           aria-label="Add Subject"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-[10.5px] font-bold transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-[11px] font-bold transition-all cursor-pointer shadow-sm"
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3.5 h-3.5" />
           <span>Add Subject</span>
         </button>
       </div>
 
-      {/* Subjects Tree List */}
-      <div className="flex flex-col gap-2 pr-0.5 mt-1 max-h-[calc(100vh-260px)] overflow-y-auto custom-scrollbar">
+      {/* Smooth Scrollable Subjects Tree Container */}
+      <div className="flex-1 flex flex-col gap-2 pr-1 overflow-y-auto custom-scrollbar">
         {subjects.map((sub) => {
           const displayTitle = sub.title || (sub as any).name || "Untitled Subject";
           const isSelected = sub.id === selectedSubjectId;
@@ -174,7 +186,7 @@ export function SubjectSidebar({
                 />
                 <button
                   type="submit"
-                  className="text-xs text-purple-400 font-bold px-1.5 cursor-pointer"
+                  className="text-xs text-purple-400 font-bold px-2 py-0.5 bg-purple-600/30 rounded-lg cursor-pointer"
                 >
                   Save
                 </button>
@@ -183,18 +195,18 @@ export function SubjectSidebar({
           }
 
           return (
-            <div key={sub.id} className="flex flex-col rounded-xl overflow-hidden">
+            <div key={sub.id} className="flex flex-col rounded-xl">
               {/* Main Subject Row */}
               <div
                 onClick={() => {
                   onSelectSubject(sub.id);
-                  if (modules.length > 0 && onSelectModule && !selectedModuleName) {
+                  if (modules.length > 0 && onSelectModule) {
                     onSelectModule(modules[0].name);
                   }
                 }}
                 className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer select-none ${
                   isSelected
-                    ? "bg-[#181C2E] border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.12)]"
+                    ? "bg-[#181C2E] border-purple-500/40 shadow-[0_0_14px_rgba(168,85,247,0.12)]"
                     : "bg-transparent border-transparent hover:bg-white/[0.03] text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -230,7 +242,7 @@ export function SubjectSidebar({
                     >
                       {displayTitle}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
                       <span className="text-purple-400 font-bold">{sub.progress || 0}%</span>
                       <span>•</span>
                       <span>{modules.length} Modules</span>
@@ -251,9 +263,9 @@ export function SubjectSidebar({
                       setOpenSubjectChevrons((prev) => ({ ...prev, [sub.id]: true }));
                     }}
                     title="Add Module / Folder in this Subject"
-                    className="p-1 rounded-md bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 hover:text-white transition-colors cursor-pointer"
+                    className="p-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 hover:text-white transition-colors cursor-pointer"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
 
                   {/* 3-Dots Menu */}
@@ -264,15 +276,16 @@ export function SubjectSidebar({
                         e.stopPropagation();
                         setOpenMenuId(isMenuOpen ? null : sub.id);
                       }}
-                      className="p-1 rounded text-slate-500 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
                     >
                       <MoreVertical className="w-3.5 h-3.5" />
                     </button>
 
                     {isMenuOpen && (
                       <div
+                        ref={menuRef}
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-6 z-20 w-32 rounded-xl bg-[#151828] border border-white/[0.1] shadow-xl py-1 flex flex-col text-xs"
+                        className="absolute right-0 top-8 z-50 w-32 rounded-xl bg-[#181D30] border border-white/[0.12] shadow-2xl py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100"
                       >
                         <button
                           onClick={() => {
@@ -280,15 +293,17 @@ export function SubjectSidebar({
                             setEditTitle(displayTitle);
                             setOpenMenuId(null);
                           }}
-                          className="flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors text-left"
+                          className="flex items-center gap-2 px-3 py-1.5 text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors text-left"
                         >
                           <Edit2 className="w-3 h-3 text-slate-400" />
                           <span>Rename</span>
                         </button>
                         <button
                           onClick={() => {
-                            onDeleteSubject(sub.id);
-                            setOpenMenuId(null);
+                            if (confirm(`Delete subject "${displayTitle}" and all its contents?`)) {
+                              onDeleteSubject(sub.id);
+                              setOpenMenuId(null);
+                            }
                           }}
                           className="flex items-center gap-2 px-3 py-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors text-left"
                         >
@@ -303,7 +318,7 @@ export function SubjectSidebar({
 
               {/* SAVRON DROPDOWN: Modules list rendered in secondary font & text in the same left menu */}
               {isOpen && (
-                <div className="flex flex-col ml-5 pl-3 border-l border-purple-500/20 gap-1 my-1">
+                <div className="flex flex-col ml-5 pl-2.5 border-l border-purple-500/20 gap-1 my-1">
                   {/* Inline Form to add a new module */}
                   {isAddingModule && (
                     <form
@@ -315,12 +330,12 @@ export function SubjectSidebar({
                         autoFocus
                         value={newModuleNameInput}
                         onChange={(e) => setNewModuleNameInput(e.target.value)}
-                        placeholder="New Module name..."
+                        placeholder="Module name..."
                         className="w-full bg-transparent text-[11px] text-white font-medium focus:outline-none"
                       />
                       <button
                         type="submit"
-                        className="text-[10px] text-purple-300 font-bold px-1.5 py-0.5 bg-purple-600 rounded"
+                        className="text-[10px] text-purple-300 font-bold px-2 py-0.5 bg-purple-600 rounded"
                       >
                         Add
                       </button>
@@ -335,13 +350,21 @@ export function SubjectSidebar({
                   )}
 
                   {modules.length === 0 ? (
-                    <div className="py-2 text-[11px] text-slate-500 font-sans italic">
-                      No modules yet. Click &ldquo;+&rdquo; above to add one.
+                    <div className="py-2 px-1 text-[11px] text-slate-500 font-sans italic flex flex-col gap-1">
+                      <span>No modules created yet.</span>
+                      <button
+                        type="button"
+                        onClick={() => setAddingModuleForSubjectId(sub.id)}
+                        className="text-purple-400 hover:underline text-left font-semibold text-[10.5px]"
+                      >
+                        + Create First Module
+                      </button>
                     </div>
                   ) : (
                     modules.map((mod) => {
                       const isModuleActive =
-                        isSelected && (selectedModuleName === mod.name || (!selectedModuleName && modules[0]?.name === mod.name));
+                        isSelected &&
+                        (selectedModuleName === mod.name || (!selectedModuleName && modules[0]?.name === mod.name));
 
                       return (
                         <div
@@ -402,4 +425,5 @@ export function SubjectSidebar({
     </div>
   );
 }
+
 

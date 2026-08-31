@@ -6,6 +6,8 @@ export interface PlacementTopic {
   code: string;
   title: string;
   module_name: string; // The folder/module name, e.g. "Module 01: Print Star Pattern"
+  duration?: string; // Video duration string, e.g. "15:44"
+  notes?: string;
   order_index: number;
   is_learned: boolean;
   is_practiced: boolean;

@@ -11,6 +11,7 @@ import {
   Search,
   CheckCircle2,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import { PlacementSubject, PlacementMilestone, PlacementModuleGroup } from "@/types/placement";
 import { MilestoneStatusDot } from "@/components/modules/cgl/shared/milestone-status-dot";
@@ -20,7 +21,7 @@ interface TopicTableProps {
   selectedModuleName?: string;
   onSelectModule?: (modName: string) => void;
   onToggleMilestone: (subjectId: string, topicId: string, milestone: PlacementMilestone) => Promise<void> | void;
-  onAddTopic: (subjectId: string, title: string, moduleName?: string) => Promise<void> | void;
+  onAddTopic: (subjectId: string, title: string, moduleName?: string, duration?: string) => Promise<void> | void;
   onAddModule?: (subjectId: string, moduleName: string) => Promise<void> | void;
   onDeleteModule?: (subjectId: string, moduleName: string) => Promise<void> | void;
   onRenameTopic: (subjectId: string, topicId: string, newTitle: string) => Promise<void> | void;
@@ -39,6 +40,7 @@ export function TopicTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingTopic, setIsAddingTopic] = useState(false);
   const [newTopicTitle, setNewTopicTitle] = useState("");
+  const [newTopicDuration, setNewTopicDuration] = useState("");
 
   // Editing topic
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
@@ -71,8 +73,14 @@ export function TopicTable({
     if (!newTopicTitle.trim() || !activeModule) return;
     try {
       setErrorMsg("");
-      await onAddTopic(subject.id, newTopicTitle.trim(), activeModule.name);
+      await onAddTopic(
+        subject.id,
+        newTopicTitle.trim(),
+        activeModule.name,
+        newTopicDuration.trim() || "10:00"
+      );
       setNewTopicTitle("");
+      setNewTopicDuration("");
       setIsAddingTopic(false);
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to add video topic");
@@ -179,19 +187,29 @@ export function TopicTable({
             autoFocus
             value={newTopicTitle}
             onChange={(e) => setNewTopicTitle(e.target.value)}
-            placeholder={`Add video topic in "${activeModule.name}"...`}
+            placeholder={`Video title for "${activeModule.name}"...`}
             className="flex-1 bg-[#0E101A] border border-purple-500/40 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
           />
+          <div className="relative w-28">
+            <Clock className="w-3 h-3 text-purple-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={newTopicDuration}
+              onChange={(e) => setNewTopicDuration(e.target.value)}
+              placeholder="15:30"
+              className="w-full bg-[#0E101A] border border-purple-500/40 rounded-xl pl-7 pr-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none font-mono"
+            />
+          </div>
           <button
             type="submit"
-            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl cursor-pointer"
+            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl cursor-pointer shrink-0"
           >
             Add Topic
           </button>
           <button
             type="button"
             onClick={() => setIsAddingTopic(false)}
-            className="px-2.5 py-2 text-slate-400 text-xs hover:text-white"
+            className="px-2.5 py-2 text-slate-400 text-xs hover:text-white shrink-0"
           >
             Cancel
           </button>
@@ -201,6 +219,8 @@ export function TopicTable({
       {/* Column Headers */}
       <div className="flex items-center justify-between px-5 py-2.5 bg-[#141726] border-b border-white/[0.06] text-[11px] font-bold text-slate-400 uppercase tracking-wider">
         <div className="flex-1">Video / Lecture Title</div>
+        {/* Duration Column Header */}
+        <div className="w-20 text-center shrink-0">Duration</div>
         <div className="grid grid-cols-4 gap-4 sm:gap-8 w-[240px] sm:w-[320px] text-center shrink-0">
           <span>Learned</span>
           <span>Practiced</span>
@@ -266,7 +286,7 @@ export function TopicTable({
                 className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors group"
               >
                 {/* Left: Indicator Dot & Topic Title */}
-                <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-4">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-3">
                   <div
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                       topic.is_mastered
@@ -284,6 +304,14 @@ export function TopicTable({
                     }`}
                   >
                     {topic.title}
+                  </span>
+                </div>
+
+                {/* Duration Section (Before 4 Circles) */}
+                <div className="w-20 flex items-center justify-center shrink-0">
+                  <span className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-slate-300 text-[10.5px] font-mono flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 text-purple-400" />
+                    <span>{topic.duration || topic.notes || "--:--"}</span>
                   </span>
                 </div>
 
