@@ -179,10 +179,9 @@ export function VanshAIModal() {
         }
 
         if (targetRoute) {
-          setTimeout(() => {
-            setIsOpen(false);
-            router.push(targetRoute);
-          }, 800);
+          setIsOpen(false);
+          router.push(targetRoute);
+          return;
         }
       } else {
         setMessages((prev) => [

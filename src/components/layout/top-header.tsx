@@ -53,9 +53,9 @@ export function TopHeader() {
             type="text"
             readOnly
             onClick={() => {
-              window.dispatchEvent(new CustomEvent("open-universal-search"));
+              window.dispatchEvent(new CustomEvent("open-vansh-ai"));
             }}
-            placeholder="Search anything... ( ⌘ K or / )"
+            placeholder="Ask Vansh AI or search anything... ( ⌘ J or / )"
             className="w-full h-9 pl-9 pr-4 rounded-xl bg-[#101320] border border-white/[0.08] text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500/50 transition-all shadow-sm cursor-pointer"
           />
         </div>

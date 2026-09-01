@@ -34,9 +34,21 @@ export function FloatingOmnibar({ onOpenAI }: FloatingOmnibarProps) {
           <input
             type="text"
             value={query}
+            onFocus={() => {
+              window.dispatchEvent(
+                new CustomEvent("open-vansh-ai", { detail: { query } })
+              );
+              onOpenAI?.(query);
+            }}
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("open-vansh-ai", { detail: { query } })
+              );
+              onOpenAI?.(query);
+            }}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask Vansh OS anything... (e.g. Open Placement, Search Resume)"
-            className="w-full bg-transparent text-sm text-white placeholder:text-slate-400 focus:outline-none"
+            className="w-full bg-transparent text-sm text-white placeholder:text-slate-400 focus:outline-none cursor-pointer"
           />
         </div>
 

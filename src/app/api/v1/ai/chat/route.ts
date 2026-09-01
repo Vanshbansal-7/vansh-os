@@ -29,10 +29,55 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { messages, attachments, currentRoute } = body;
 
-    if (!messages || !Array.isArray(messages)) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
     }
 
+    const latestMessageObj = messages[messages.length - 1];
+    const rawText = (latestMessageObj.content || "").trim().toLowerCase();
+
+    // ⚡ 1. ULTRA FAST-PATH: Instant Greetings (< 1ms response)
+    const GREETINGS = ["hi", "hii", "hiii", "hello", "hey", "heyy", "hlo", "namaste", "yo", "good morning", "good evening", "good afternoon", "who are you"];
+    if (GREETINGS.includes(rawText) && (!attachments || attachments.length === 0)) {
+      return NextResponse.json({
+        success: true,
+        message: "Hello Vansh! 👋 I am your VOS Autonomous AI Agent. Ask me to open any module, import syllabus, manage timetable, add priorities, or search your files and web.",
+        executedTools: [],
+      });
+    }
+
+    // ⚡ 2. ULTRA FAST-PATH: Direct Screen Navigation (< 1ms response, auto-routes screen)
+    const navMatch = rawText.match(/^(?:open|go to|show|switch to|navigate to|launch)s+(?:thes+)?([a-z0-9s]+?)(?:s+(?:module|page|tab|section|screen))?$/i);
+    if (navMatch && (!attachments || attachments.length === 0)) {
+      const entity = navMatch[1].trim();
+      let targetRoute: string | null = null;
+      if (entity.includes("placement") || entity.includes("dsa") || entity.includes("java")) targetRoute = "/modules/placement";
+      else if (entity.includes("cgl") || entity.includes("ssc")) targetRoute = "/modules/cgl";
+      else if (entity.includes("youtube") || entity.includes("yt")) targetRoute = "/modules/youtube";
+      else if (entity.includes("exam")) targetRoute = "/modules/exams";
+      else if (entity.includes("compan") || entity.includes("job") || entity.includes("ats")) targetRoute = "/companies";
+      else if (entity.includes("doc") || entity.includes("vault")) targetRoute = "/documents";
+      else if (entity.includes("cal") || entity.includes("schedule") || entity.includes("time")) targetRoute = "/calendar";
+      else if (entity.includes("streak") || entity.includes("hab")) targetRoute = "/streak";
+      else if (entity.includes("ana") || entity.includes("stat")) targetRoute = "/analytics";
+      else if (entity.includes("sys") || entity.includes("term") || entity.includes("set")) targetRoute = "/system";
+      else if (entity === "home" || entity === "dashboard" || entity === "main") targetRoute = "/";
+
+      if (targetRoute) {
+        return NextResponse.json({
+          success: true,
+          message: `Opening ${targetRoute}...`,
+          executedTools: [{
+            name: "vos_navigate",
+            args: { route: targetRoute },
+            result: { success: true, navigatedTo: targetRoute, message: `Navigated to ${targetRoute}` }
+          }],
+          navigatedTo: targetRoute,
+        });
+      }
+    }
+
+    // 🤖 3. FULL AUTONOMOUS LLM ENGINE (Gemini 3.6 Flash)
     const systemInstruction = await buildVOSSystemContext(currentRoute);
     const ai = new GoogleGenAI({ apiKey });
 
@@ -46,12 +91,12 @@ export async function POST(req: Request) {
       model: "gemini-3.6-flash",
       config: {
         systemInstruction,
+        temperature: 0.2,
         tools: [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }],
       },
       history: history.length > 0 ? (history as any) : undefined,
     });
 
-    const latestMessageObj = messages[messages.length - 1];
     const userParts: any[] = [];
 
     // Attach multimodal files (PDF / Image) if present
