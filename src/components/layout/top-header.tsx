@@ -6,6 +6,7 @@ import { Search, Flame, ChevronRight } from "lucide-react";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useStreakStore, getISTDate, getISTDateString, getTodayIST } from "@/hooks/use-streak-store";
 import { NotificationCenter } from "@/components/layout/notification-center";
+import { StudyTimerWidget } from "@/components/layout/study-timer-widget";
 
 export function TopHeader() {
   const { greeting, userName, currentDateFormatted } = useDashboard();
@@ -82,6 +83,11 @@ export function TopHeader() {
           <p className="text-xs font-medium text-slate-400 mt-0.5">
             {currentDateFormatted}
           </p>
+        </div>
+
+        {/* Study Focus Timer & Stopwatch (with Red Cyberpunk Glow & Background Tab Sync) */}
+        <div className="flex items-center justify-center my-1 sm:my-0">
+          <StudyTimerWidget />
         </div>
 
         {/* Live Streak Widget with Chevron Dropdown Navigation to /streak */}
