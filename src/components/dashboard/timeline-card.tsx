@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Pause, Square, MoreVertical, Sheet, Plus } from "lucide-react";
+import { Play, Pause, Square, MoreVertical, Sheet, Plus, GraduationCap } from "lucide-react";
 import { useTimeline } from "@/hooks/use-timeline";
 import { WidgetState } from "@/components/shared/widget-state";
 import { TimetableEntry } from "@/types/dashboard";
@@ -127,8 +127,26 @@ export function TimelineCard() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto no-scrollbar relative pl-0.5">
-          {isLoading ? (
+        <div className="flex-1 overflow-y-auto no-scrollbar relative pl-0.5 flex flex-col justify-center">
+          {isCollegeDay ? (
+            <div className="flex flex-col items-center justify-center text-center p-5 rounded-2xl bg-gradient-to-b from-amber-500/[0.08] via-[#131628] to-[#0D101C] border border-amber-500/25 shadow-lg my-auto">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-300 mb-3 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10.5px] font-bold uppercase tracking-wider mb-2">
+                <span>🎓 College Day — Timetable Off</span>
+              </div>
+              <h4 className="text-sm font-bold text-white tracking-tight mb-1.5">
+                Campus Focus & Lecture Mode
+              </h4>
+              <p className="text-xs text-slate-300 max-w-xs leading-relaxed mb-3 font-medium">
+                Monday & Tuesday are dedicated to your college lectures, practicals & labs. Study timetable is paused for daytime campus focus.
+              </p>
+              <div className="p-3 rounded-xl bg-white/[0.04] border border-amber-400/20 text-[11.5px] text-amber-200/90 font-medium italic max-w-xs shadow-sm">
+                ✨ &quot;Every lab completed and every concept grasped in college builds the foundation for your dream career. Give your 100% today!&quot;
+              </div>
+            </div>
+          ) : isLoading ? (
             <WidgetState state="loading" compact />
           ) : error ? (
             <WidgetState

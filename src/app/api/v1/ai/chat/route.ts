@@ -40,11 +40,11 @@ export async function POST(req: Request) {
     const hasAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
 
     // ⚡ 1. ULTRA FAST-PATH: Greetings (< 1ms response)
-    const GREETINGS = ["hi", "hii", "hiii", "hello", "hey", "heyy", "hlo", "namaste", "yo", "good morning", "good evening", "good afternoon", "who are you"];
+    const GREETINGS = ["hi", "hii", "hiii", "hello", "hey", "heyy", "hlo", "namaste", "yo", "good morning", "good evening", "good afternoon", "who are you", "raj", "hey raj", "hi raj"];
     if (GREETINGS.includes(rawText) && !hasAttachments) {
       return NextResponse.json({
         success: true,
-        message: "Hello Vansh! 👋 I'm your VOS Autonomous Agent. How can I help you manage your timetable, syllabus, tasks, or navigation today?",
+        message: "Hey Vansh bhai! 👋 Raj here. Batao kya plan hai aaj ka? Timetable, subjects, priority tasks, ya koi module kholna hai? I'm right here with you!",
         executedTools: [],
       });
     }
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       if (targetRoute) {
         return NextResponse.json({
           success: true,
-          message: `Opening ${targetRoute}...`,
+          message: `Haan Vansh bhai, opening ${targetRoute}...`,
           executedTools: [{
             name: "vos_navigate",
             args: { route: targetRoute },
@@ -87,10 +87,22 @@ export async function POST(req: Request) {
       const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const currentDayName = dayNames[dayOfWeek];
 
+      if (dayOfWeek === 1 || dayOfWeek === 2) {
+        return NextResponse.json({
+          success: true,
+          message: `🎓 **College Day — Timetable Off, Vansh bhai!**\n\nMonday & Tuesday are dedicated to your college lectures, practicals & labs. Study timetable is paused for daytime campus focus.\n\n✨ *"Every lecture attended and lab completed builds the foundation for your dream placement. Give your 100% today!"*`,
+          executedTools: [{
+            name: "vos_get_timetable",
+            args: { day_of_week: dayOfWeek },
+            result: { success: true, isCollegeDay: true, message: "College Day - Study timetable paused" },
+          }],
+        });
+      }
+
       const ttResult = await executeVOSTool("vos_get_timetable", { day_of_week: dayOfWeek });
       const blocks = (ttResult.data as any[]) || [];
 
-      let formattedText = `📅 **Your Timetable for ${currentDayName}:**\n\n`;
+      let formattedText = `📅 **Here is your Timetable for ${currentDayName}, Vansh bhai:**\n\n`;
       if (blocks.length === 0) {
         formattedText += "No active study blocks scheduled for today. You're free or on revision mode!";
       } else {
@@ -115,9 +127,9 @@ export async function POST(req: Request) {
       const taskResult = await executeVOSTool("vos_get_tasks", {});
       const taskList = (taskResult.data as any[]) || [];
 
-      let formattedText = "🎯 **Today's Active Priorities:**\n\n";
+      let formattedText = "🎯 **Here are today's active priorities, Vansh bhai:**\n\n";
       if (taskList.length === 0) {
-        formattedText += "All priorities are completed! 🎉 Great job!";
+        formattedText += "All priorities are completed! 🎉 Great job, bhai!";
       } else {
         taskList.forEach((t) => {
           const badge = t.priority_level === "HIGH" ? "🔴" : t.priority_level === "MEDIUM" ? "🟡" : "🟢";

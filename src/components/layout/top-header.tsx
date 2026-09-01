@@ -7,10 +7,41 @@ import { useDashboard } from "@/hooks/use-dashboard";
 import { useStreakStore, getISTDate, getISTDateString, getTodayIST } from "@/hooks/use-streak-store";
 import { NotificationCenter } from "@/components/layout/notification-center";
 import { StudyTimerWidget } from "@/components/layout/study-timer-widget";
+import { ProfileEditModal } from "@/components/layout/profile-edit-modal";
 
 export function TopHeader() {
   const { greeting, userName, currentDateFormatted } = useDashboard();
   const { currentStreak, loginDateSet, checkedInToday } = useStreakStore();
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
+  const [displayName, setDisplayName] = React.useState(userName || "Vansh");
+  const [avatarUrl, setAvatarUrl] = React.useState("/assets/founder_avatar.png");
+
+  // Sync profile data from localStorage & profile-updated events
+  React.useEffect(() => {
+    const loadProfile = () => {
+      const stored = localStorage.getItem("vos_user_profile");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.name) setDisplayName(parsed.name);
+          if (parsed.avatar_url) setAvatarUrl(parsed.avatar_url);
+        } catch (e) {}
+      } else if (userName) {
+        setDisplayName(userName);
+      }
+    };
+
+    loadProfile();
+
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail?.name) setDisplayName(e.detail.name);
+      if (e.detail?.avatar_url) setAvatarUrl(e.detail.avatar_url);
+    };
+
+    window.addEventListener("profile-updated", handleProfileUpdate);
+    return () => window.removeEventListener("profile-updated", handleProfileUpdate);
+  }, [userName]);
 
   const weeklyPattern = React.useMemo(() => {
     const today = getISTDate();
@@ -56,7 +87,7 @@ export function TopHeader() {
             onClick={() => {
               window.dispatchEvent(new CustomEvent("open-vansh-ai"));
             }}
-            placeholder="Ask Vansh AI or search anything... ( ⌘ J or / )"
+            placeholder="Ask anything..."
             className="w-full h-9 pl-9 pr-4 rounded-xl bg-[#101320] border border-white/[0.08] text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500/50 transition-all shadow-sm cursor-pointer"
           />
         </div>
@@ -64,11 +95,18 @@ export function TopHeader() {
         {/* Top Right Utilities */}
         <div className="flex items-center gap-2.5">
           <NotificationCenter />
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-purple-400/40 shadow-sm cursor-pointer hover:scale-105 transition-transform">
+          <div
+            onClick={() => setIsProfileModalOpen(true)}
+            className="w-8 h-8 rounded-full overflow-hidden border border-purple-400/40 shadow-sm cursor-pointer hover:scale-105 transition-transform"
+            title="Click to edit profile & photo"
+          >
             <img
-              src="/assets/founder_avatar.png"
-              alt="Vansh"
+              src={avatarUrl}
+              alt={displayName}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/assets/founder_avatar.png";
+              }}
             />
           </div>
         </div>
@@ -78,7 +116,7 @@ export function TopHeader() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-col">
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-1.5 leading-tight">
-            {greeting}, {userName}! <span className="inline-block">👋</span>
+            {greeting}, {displayName}! <span className="inline-block">👋</span>
           </h1>
           <p className="text-xs font-medium text-slate-400 mt-0.5">
             {currentDateFormatted}
@@ -133,6 +171,17 @@ export function TopHeader() {
           </div>
         </Link>
       </div>
+
+      <ProfileEditModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentName={displayName}
+        currentAvatarUrl={avatarUrl}
+        onProfileUpdated={(n, a) => {
+          setDisplayName(n);
+          setAvatarUrl(a);
+        }}
+      />
     </header>
   );
 }

@@ -1,30 +1,26 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, RotateCcw, Timer, Flame, ChevronDown, Bell, Check } from "lucide-react";
+import { Play, Pause, RotateCcw, ChevronDown, Check } from "lucide-react";
 
-type TimerMode = "POMODORO" | "DEEP_WORK" | "STOPWATCH" | "CUSTOM";
+type ModeType = "TIMER" | "STOPWATCH";
 
-const MODE_DEFAULTS: Record<TimerMode, number> = {
-  POMODORO: 25 * 60,
-  DEEP_WORK: 50 * 60,
-  STOPWATCH: 0,
-  CUSTOM: 30 * 60,
-};
+const PRESET_MINUTES = [15, 25, 30, 45, 60, 90];
 
 export function StudyTimerWidget() {
-  const [mode, setMode] = useState<TimerMode>("POMODORO");
+  const [mode, setMode] = useState<ModeType>("TIMER");
   const [secondsLeft, setSecondsLeft] = useState<number>(25 * 60);
   const [stopwatchSeconds, setStopwatchSeconds] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [showPresets, setShowPresets] = useState<boolean>(false);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [customMinsInput, setCustomMinsInput] = useState<string>("");
 
   const startTimeRef = useRef<number | null>(null);
   const baseSecondsRef = useRef<number>(25 * 60);
   const baseStopwatchRef = useRef<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Synthesize soft pleasant chime using Web Audio API
+  // Synthesize soft chime using Web Audio API
   const playChime = useCallback(() => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -34,8 +30,8 @@ export function StudyTimerWidget() {
       const gain = ctx.createGain();
 
       osc.type = "sine";
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3); // A5
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
 
       gain.gain.setValueAtTime(0.3, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
@@ -48,7 +44,7 @@ export function StudyTimerWidget() {
     } catch (e) {}
   }, []);
 
-  // Format MM:SS or HH:MM:SS
+  // Format time display
   const formatTime = (totalSecs: number) => {
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
@@ -60,24 +56,38 @@ export function StudyTimerWidget() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Switch modes
-  const handleSelectMode = (newMode: TimerMode, customDurationSecs?: number) => {
+  // Switch mode to Timer with specified minutes
+  const setTimerMinutes = (mins: number) => {
     setIsRunning(false);
-    setMode(newMode);
-    setShowPresets(false);
-
-    if (newMode === "STOPWATCH") {
-      setStopwatchSeconds(0);
-      baseStopwatchRef.current = 0;
-    } else {
-      const dur = customDurationSecs || MODE_DEFAULTS[newMode];
-      setSecondsLeft(dur);
-      baseSecondsRef.current = dur;
-    }
+    setMode("TIMER");
+    const dur = Math.max(1, mins) * 60;
+    setSecondsLeft(dur);
+    baseSecondsRef.current = dur;
     startTimeRef.current = null;
+    setShowDropdown(false);
   };
 
-  // Toggle start / pause
+  // Switch to Stopwatch
+  const switchToStopwatch = () => {
+    setIsRunning(false);
+    setMode("STOPWATCH");
+    setStopwatchSeconds(0);
+    baseStopwatchRef.current = 0;
+    startTimeRef.current = null;
+    setShowDropdown(false);
+  };
+
+  // Set Custom Timer from input
+  const handleSetCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = parseInt(customMinsInput, 10);
+    if (!isNaN(val) && val > 0 && val <= 720) {
+      setTimerMinutes(val);
+      setCustomMinsInput("");
+    }
+  };
+
+  // Toggle Start / Pause
   const togglePlay = () => {
     if (!isRunning) {
       startTimeRef.current = Date.now();
@@ -96,13 +106,11 @@ export function StudyTimerWidget() {
       setStopwatchSeconds(0);
       baseStopwatchRef.current = 0;
     } else {
-      const def = MODE_DEFAULTS[mode];
-      setSecondsLeft(def);
-      baseSecondsRef.current = def;
+      setSecondsLeft(baseSecondsRef.current);
     }
   };
 
-  // Timer Tick Engine using Date.now() timestamp math (immune to tab throttling/minimized browser)
+  // Precision Timer loop using Date.now() timestamp math (never drifts in minimized tab)
   useEffect(() => {
     if (!isRunning) return;
 
@@ -119,14 +127,7 @@ export function StudyTimerWidget() {
         if (remaining === 0) {
           setIsRunning(false);
           startTimeRef.current = null;
-          baseSecondsRef.current = MODE_DEFAULTS[mode];
           playChime();
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification("⏰ Study Focus Complete!", {
-              body: `Great session! Take a short break.`,
-              icon: "/assets/founder_avatar.png",
-            });
-          }
         }
       }
     }, 200);
@@ -134,7 +135,7 @@ export function StudyTimerWidget() {
     return () => clearInterval(interval);
   }, [isRunning, mode, playChime]);
 
-  // Update base reference on pause
+  // Update base seconds on pause
   useEffect(() => {
     if (!isRunning) {
       if (mode === "STOPWATCH") {
@@ -145,12 +146,12 @@ export function StudyTimerWidget() {
     }
   }, [isRunning, mode, secondsLeft, stopwatchSeconds]);
 
-  // Browser Tab Title Sync: Works in background & minimized browser window!
+  // Browser Tab Title Sync: Works in minimized & background tabs
   useEffect(() => {
     if (isRunning) {
       const display = mode === "STOPWATCH" ? formatTime(stopwatchSeconds) : formatTime(secondsLeft);
       const icon = mode === "STOPWATCH" ? "⏱️" : "🔴";
-      document.title = `(${display}) ${icon} Focus — Vansh OS`;
+      document.title = `(${display}) ${icon} Study — Vansh OS`;
     } else {
       document.title = "Vansh OS — The Personal Intelligence Operating System";
     }
@@ -160,11 +161,11 @@ export function StudyTimerWidget() {
     };
   }, [isRunning, secondsLeft, stopwatchSeconds, mode]);
 
-  // Close dropdown on outside click
+  // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowPresets(false);
+        setShowDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -176,24 +177,24 @@ export function StudyTimerWidget() {
   return (
     <div className="relative flex items-center" ref={dropdownRef}>
       <div
-        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all duration-300 shadow-sm select-none ${
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 shadow-sm select-none ${
           isRunning
             ? "bg-[#161019] border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.25)] ring-1 ring-red-500/30"
             : "bg-[#101320] hover:bg-[#131728] border-white/[0.08] hover:border-red-500/30"
         }`}
       >
-        {/* Red Live Pulse Beacon / Mode Indicator */}
+        {/* Red Beacon & Mode Selector */}
         <div
-          onClick={() => setShowPresets(!showPresets)}
+          onClick={() => setShowDropdown(!showDropdown)}
           className="flex items-center gap-1.5 cursor-pointer group"
-          title="Click to switch modes or presets"
+          title="Click to switch between Timer, Stopwatch & Custom minutes"
         >
           <div className="relative flex items-center justify-center">
             <span
               className={`w-2.5 h-2.5 rounded-full transition-all ${
                 isRunning
                   ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse"
-                  : "bg-red-500/50 group-hover:bg-red-400"
+                  : "bg-red-500/60 group-hover:bg-red-400"
               }`}
             />
             {isRunning && (
@@ -202,7 +203,7 @@ export function StudyTimerWidget() {
           </div>
 
           <span className="text-[10px] font-bold tracking-wider text-red-400 uppercase hidden md:inline-block">
-            {mode === "STOPWATCH" ? "STOPWATCH" : mode === "DEEP_WORK" ? "DEEP WORK" : mode === "POMODORO" ? "POMODORO" : "CUSTOM"}
+            {mode}
           </span>
           <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-red-400 transition-colors" />
         </div>
@@ -218,9 +219,8 @@ export function StudyTimerWidget() {
           </span>
         </div>
 
-        {/* Action Controls */}
+        {/* Play / Reset Action Buttons */}
         <div className="flex items-center gap-1">
-          {/* Start / Pause Button */}
           <button
             type="button"
             onClick={togglePlay}
@@ -234,7 +234,6 @@ export function StudyTimerWidget() {
             {isRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 translate-x-0.2" />}
           </button>
 
-          {/* Reset Button */}
           <button
             type="button"
             onClick={handleReset}
@@ -247,72 +246,81 @@ export function StudyTimerWidget() {
         </div>
       </div>
 
-      {/* Mode & Duration Preset Dropdown Menu */}
-      {showPresets && (
-        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-56 p-2 rounded-2xl bg-[#111322] border border-red-500/30 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
-          <div className="px-2.5 py-1 text-[9.5px] font-extrabold uppercase tracking-wider text-slate-400">
-            Select Focus Mode
+      {/* Mode & Custom Timer Menu */}
+      {showDropdown && (
+        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-56 p-2.5 rounded-2xl bg-[#111322] border border-red-500/30 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wider text-slate-400">
+            Study Modes
           </div>
 
           <div className="flex flex-col gap-1 mt-1">
             <button
               type="button"
-              onClick={() => handleSelectMode("POMODORO", 25 * 60)}
+              onClick={() => setTimerMinutes(25)}
               className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                mode === "POMODORO" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "hover:bg-white/[0.06] text-slate-300"
+                mode === "TIMER" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "hover:bg-white/[0.06] text-slate-300"
               }`}
             >
-              <span className="flex items-center gap-2">
-                <span>🍅 Pomodoro</span>
-              </span>
-              <span className="font-mono text-[11px] text-slate-400">25m</span>
+              <span>⏳ Countdown Timer</span>
+              {mode === "TIMER" && <Check className="w-3.5 h-3.5 text-red-400" />}
             </button>
 
             <button
               type="button"
-              onClick={() => handleSelectMode("DEEP_WORK", 50 * 60)}
-              className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                mode === "DEEP_WORK" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "hover:bg-white/[0.06] text-slate-300"
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span>🎯 Deep Work</span>
-              </span>
-              <span className="font-mono text-[11px] text-slate-400">50m</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectMode("STOPWATCH")}
+              onClick={switchToStopwatch}
               className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                 mode === "STOPWATCH" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "hover:bg-white/[0.06] text-slate-300"
               }`}
             >
-              <span className="flex items-center gap-2">
-                <span>⏱️ Stopwatch</span>
-              </span>
-              <span className="font-mono text-[11px] text-slate-400">Count Up</span>
+              <span>⏱️ Stopwatch (Count Up)</span>
+              {mode === "STOPWATCH" && <Check className="w-3.5 h-3.5 text-red-400" />}
             </button>
-
-            <div className="h-[1px] bg-white/[0.08] my-1" />
-
-            <div className="px-2.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wider text-slate-400">
-              Quick Timers
-            </div>
-
-            <div className="grid grid-cols-3 gap-1 mt-1">
-              {[15, 30, 45, 60, 90, 120].map((mins) => (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => handleSelectMode("CUSTOM", mins * 60)}
-                  className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-[11px] font-mono font-bold text-slate-300 transition-colors border border-white/[0.04]"
-                >
-                  {mins}m
-                </button>
-              ))}
-            </div>
           </div>
+
+          <div className="h-[1px] bg-white/[0.08] my-2" />
+
+          {/* Quick Preset Buttons */}
+          <div className="px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wider text-slate-400">
+            Quick Timer Presets
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 mt-1">
+            {PRESET_MINUTES.map((mins) => (
+              <button
+                key={mins}
+                type="button"
+                onClick={() => setTimerMinutes(mins)}
+                className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-red-500/20 hover:text-red-400 text-[11px] font-mono font-bold text-slate-300 transition-colors border border-white/[0.04]"
+              >
+                {mins}m
+              </button>
+            ))}
+          </div>
+
+          <div className="h-[1px] bg-white/[0.08] my-2" />
+
+          {/* Custom Minute Input */}
+          <form onSubmit={handleSetCustom} className="flex flex-col gap-1 px-1">
+            <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-slate-400">
+              Custom Timer (Minutes)
+            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <input
+                type="number"
+                min="1"
+                max="720"
+                value={customMinsInput}
+                onChange={(e) => setCustomMinsInput(e.target.value)}
+                placeholder="e.g. 35"
+                className="flex-1 h-7 px-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-red-500/50"
+              />
+              <button
+                type="submit"
+                className="h-7 px-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold transition-all shadow-sm cursor-pointer"
+              >
+                Set
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

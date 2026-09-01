@@ -47,14 +47,15 @@ export function FloatingOmnibar({ onOpenAI }: FloatingOmnibarProps) {
               onOpenAI?.(query);
             }}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask Vansh OS anything... (e.g. Open Placement, Search Resume)"
+            placeholder="Ask Raj anything... (e.g. Open Placement, Raj what's my schedule)"
             className="w-full bg-transparent text-sm text-white placeholder:text-slate-400 focus:outline-none cursor-pointer"
           />
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.06] border border-white/[0.08] text-[10px] font-mono font-bold text-slate-400">
-            <span>⌘</span>
+            <span>Ctrl</span>
+            <span>+</span>
             <span>J</span>
           </div>
 

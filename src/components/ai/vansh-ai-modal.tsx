@@ -219,11 +219,12 @@ export function VanshAIModal() {
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-extrabold text-white tracking-tight leading-none">
-                Vansh AI — Autonomous OS Agent
+              <h2 className="text-sm font-extrabold text-white tracking-tight leading-none flex items-center gap-2">
+                <span>Raj</span>
+                <span className="text-[10px] font-semibold text-purple-400 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.2 rounded-md">Best Friend & Co-Pilot</span>
               </h2>
-              <span className="text-[10px] text-purple-300 font-semibold mt-1 block">
-                Powered by Gemini 2.5 Flash • Live Supabase CRUD & Web Search
+              <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                Bhai jaisa dost & personal OS partner • Live VOS Control
               </span>
             </div>
           </div>
@@ -243,39 +244,39 @@ export function VanshAIModal() {
           className="p-5 flex-1 overflow-y-auto flex flex-col gap-6 no-scrollbar bg-[#090A10]"
         >
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto opacity-80">
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4 shadow-lg">
-                <Bot className="w-8 h-8" />
+            <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto opacity-90">
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-300 mb-4 shadow-lg shadow-purple-900/20">
+                <Sparkles className="w-8 h-8 text-purple-400" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">VOS Operating System Intelligence</h3>
-              <p className="text-xs font-medium text-slate-400 leading-relaxed">
-                Give natural-language commands to manage subjects, video topics, weekly timetables, priorities, ATS applications, notes, or search the web.
+              <h3 className="text-lg font-bold text-white mb-2">Hey Vansh bhai! Raj here. 👋</h3>
+              <p className="text-xs font-medium text-slate-300 leading-relaxed max-w-sm">
+                Main hoon tumhara personal partner. Batao kya plan hai aaj ka? Timetable, subjects, priority tasks, ya koi module kholna ho—I&apos;ve got your back!
               </p>
 
               <div className="flex flex-wrap gap-2 justify-center mt-6">
                 <button
-                  onClick={() => handleSendMessage("Show my today's timetable schedule")}
+                  onClick={() => handleSendMessage("Raj, show today's schedule")}
                   className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-purple-600/20 hover:border-purple-500/30 transition-all cursor-pointer"
                 >
-                  📅 "Show today's timetable"
+                  📅 &quot;Raj, show today&apos;s schedule&quot;
                 </button>
                 <button
-                  onClick={() => handleSendMessage("Add DBMS as a subject in Placement")}
+                  onClick={() => handleSendMessage("Raj, open Placement module")}
                   className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-purple-600/20 hover:border-purple-500/30 transition-all cursor-pointer"
                 >
-                  📚 "Add DBMS to Placement"
+                  🚀 &quot;Raj, open Placement&quot;
                 </button>
                 <button
-                  onClick={() => handleSendMessage("Search the web for latest SSC CGL 2026 notification updates")}
+                  onClick={() => handleSendMessage("Raj, what are my priorities for today?")}
                   className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-purple-600/20 hover:border-purple-500/30 transition-all cursor-pointer"
                 >
-                  🌐 "Search SSC CGL Updates"
+                  🎯 &quot;Raj, my priorities&quot;
                 </button>
                 <button
-                  onClick={() => handleSendMessage("Find my notes about SQL")}
+                  onClick={() => handleSendMessage("Raj, search the web for latest SSC CGL 2026 notification updates")}
                   className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-purple-600/20 hover:border-purple-500/30 transition-all cursor-pointer"
                 >
-                  🔍 "Find my SQL notes"
+                  🌐 &quot;Search SSC CGL Updates&quot;
                 </button>
               </div>
             </div>
@@ -509,7 +510,7 @@ export function VanshAIModal() {
             autoFocus
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Command Vansh AI (e.g. Add DBMS, Import timetable, Search web...)"
+            placeholder="Ask Raj anything... (e.g. Raj bhai open Placement, what's my schedule)"
             className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none font-medium"
             disabled={isProcessing}
           />
