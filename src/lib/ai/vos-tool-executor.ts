@@ -31,11 +31,26 @@ export async function executeVOSTool(name: string, args: Record<string, any>): P
   try {
     switch (name) {
       case "vos_navigate": {
-        const route = args.route || "/";
+        const raw = (args.route || "").trim().toLowerCase();
+        let targetRoute = "/";
+        
+        if (raw.includes("placement")) targetRoute = "/modules/placement";
+        else if (raw.includes("cgl")) targetRoute = "/modules/cgl";
+        else if (raw.includes("youtube") || raw.includes("yt")) targetRoute = "/modules/youtube";
+        else if (raw.includes("exam")) targetRoute = "/modules/exams";
+        else if (raw.includes("compan") || raw.includes("job") || raw.includes("ats")) targetRoute = "/companies";
+        else if (raw.includes("doc") || raw.includes("vault")) targetRoute = "/documents";
+        else if (raw.includes("cal") || raw.includes("schedule")) targetRoute = "/calendar";
+        else if (raw.includes("streak") || raw.includes("hab")) targetRoute = "/streak";
+        else if (raw.includes("ana") || raw.includes("stat")) targetRoute = "/analytics";
+        else if (raw.includes("sys") || raw.includes("term")) targetRoute = "/system";
+        else if (args.route && args.route.startsWith("/")) targetRoute = args.route;
+        else if (args.route) targetRoute = "/" + args.route;
+
         return {
           success: true,
-          navigatedTo: route,
-          message: "Navigated to " + route,
+          navigatedTo: targetRoute,
+          message: "Navigated to " + targetRoute,
         };
       }
 

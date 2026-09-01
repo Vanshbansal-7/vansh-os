@@ -168,19 +168,21 @@ export function VanshAIModal() {
         setMessages((prev) => [...prev, newAiMsg]);
 
         // Process any Navigation tools returned by the API
-        if (json.navigatedTo) {
-          setTimeout(() => {
-            router.push(json.navigatedTo);
-          }, 600);
-        } else if (json.executedTools) {
+        let targetRoute = json.navigatedTo;
+        if (!targetRoute && json.executedTools) {
           const navTool = json.executedTools.find(
-            (t: any) => t.name === "vos_navigate" || t.name === "vos_open_entity"
+            (t: any) => (t.name === "vos_navigate" || t.name === "vos_open_entity") && t.result?.navigatedTo
           );
           if (navTool && navTool.result?.navigatedTo) {
-            setTimeout(() => {
-              router.push(navTool.result.navigatedTo);
-            }, 600);
+            targetRoute = navTool.result.navigatedTo;
           }
+        }
+
+        if (targetRoute) {
+          setTimeout(() => {
+            setIsOpen(false);
+            router.push(targetRoute);
+          }, 800);
         }
       } else {
         setMessages((prev) => [
@@ -377,10 +379,14 @@ export function VanshAIModal() {
                                   )}
                                   {t.result?.navigatedTo && (
                                     <button
-                                      onClick={() => router.push(t.result.navigatedTo)}
-                                      className="mt-1 flex items-center gap-1 text-[10px] font-bold text-purple-300 hover:text-white"
+                                      type="button"
+                                      onClick={() => {
+                                        setIsOpen(false);
+                                        router.push(t.result.navigatedTo);
+                                      }}
+                                      className="mt-1 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-[10px] font-bold text-white shadow transition-all cursor-pointer w-fit"
                                     >
-                                      <span>Go to destination</span>
+                                      <span>🚀 Open: {t.result.navigatedTo}</span>
                                       <ArrowRight className="w-3 h-3" />
                                     </button>
                                   )}
@@ -390,6 +396,24 @@ export function VanshAIModal() {
                           );
                         })}
                       </div>
+                    )}
+
+                    {/* Direct Screen Navigation Action Button */}
+                    {msg.toolsExecuted?.some((t) => t.result?.navigatedTo) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = msg.toolsExecuted?.find((t) => t.result?.navigatedTo)?.result?.navigatedTo;
+                          if (target) {
+                            setIsOpen(false);
+                            router.push(target);
+                          }
+                        }}
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-900/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer mt-1 w-fit"
+                      >
+                        <span>🚀 Open Destination Screen</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
                     )}
 
                     {/* Web Citation Source Links */}
