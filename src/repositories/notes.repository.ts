@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 export interface NoteRecord {
   id?: string;
@@ -14,9 +14,16 @@ export interface NoteRecord {
   updated_at?: string;
 }
 
+function getSupabase() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://otjslotfiiubgehiucmn.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_e9C8vUd9Xnwk6DZIEJOQLw_0x4pwPWk'
+  );
+}
+
 export class NotesRepository {
   static async findByModule(module: string, examId?: string): Promise<NoteRecord[]> {
-    const supabase = await createClient();
+    const supabase = getSupabase();
     let query = supabase
       .from('notes')
       .select('*')
@@ -39,7 +46,7 @@ export class NotesRepository {
   }
 
   static async create(note: NoteRecord): Promise<NoteRecord> {
-    const supabase = await createClient();
+    const supabase = getSupabase();
     const { data, error } = await supabase
       .from('notes')
       .insert({
@@ -63,7 +70,7 @@ export class NotesRepository {
   }
 
   static async update(id: string, updates: Partial<NoteRecord>): Promise<NoteRecord> {
-    const supabase = await createClient();
+    const supabase = getSupabase();
     const { data, error } = await supabase
       .from('notes')
       .update(updates)
@@ -80,7 +87,7 @@ export class NotesRepository {
   }
 
   static async delete(id: string): Promise<void> {
-    const supabase = await createClient();
+    const supabase = getSupabase();
     const { error } = await supabase.from('notes').delete().eq('id', id);
 
     if (error) {
