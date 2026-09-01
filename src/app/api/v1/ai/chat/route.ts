@@ -13,12 +13,15 @@ const MAX_AGENT_STEPS = 5;
 export async function POST(req: Request) {
   const requestId = crypto.randomUUID();
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    let apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (apiKey) {
+      apiKey = apiKey.replace(/^["']|["']$/g, "").trim();
+    }
 
     if (!apiKey) {
       return NextResponse.json({
         success: true,
-        message: "⚠️ **Gemini API Key Missing**\n\nPlease add `GEMINI_API_KEY` to your `.env.local` file.",
+        message: "⚠️ **Gemini API Key Missing in Production Environment**\n\nTo enable Vansh AI on your deployed Vercel site:\n1. Go to your **Vercel Project Dashboard** -> **Settings** -> **Environment Variables**.\n2. Add `GEMINI_API_KEY` with your Google Gemini API key value.\n3. Redeploy your project.",
         executedTools: [],
       });
     }
@@ -33,8 +36,8 @@ export async function POST(req: Request) {
     const systemInstruction = await buildVOSSystemContext(currentRoute);
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Prefer gemini-2.5-flash, fallback to gemini-1.5-flash
-    let modelName = "gemini-2.5-flash";
+    // Primary official model: gemini-3.6-flash
+    let modelName = "gemini-3.6-flash";
     let model = genAI.getGenerativeModel({
       model: modelName,
       systemInstruction,
