@@ -14,12 +14,13 @@ const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 export async function POST(req: Request) {
   const requestId = crypto.randomUUID();
   try {
-    let apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (apiKey) {
-      apiKey = apiKey.replace(/^["']|["']$/g, "").trim();
-    }
+    const rawKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+    const apiKeys = rawKeys
+      .split(",")
+      .map((k) => k.replace(/^["']|["']$/g, "").trim())
+      .filter(Boolean);
 
-    if (!apiKey) {
+    if (apiKeys.length === 0) {
       return NextResponse.json({
         success: true,
         message: "⚠️ **Gemini API Key Missing**\n\nPlease add `GEMINI_API_KEY` to your `.env.local` file or Vercel Environment Variables.",
@@ -135,25 +136,14 @@ export async function POST(req: Request) {
       });
     }
 
-    // 🤖 5. FULL AUTONOMOUS LLM ENGINE (Gemini 3.6 Flash)
+    // 🤖 5. FULL AUTONOMOUS LLM ENGINE WITH MULTI-KEY POOL & FAILOVER
     const systemInstruction = await buildVOSSystemContext(currentRoute);
-    const ai = new GoogleGenAI({ apiKey });
 
     // Format previous history
     const history = messages.slice(0, -1).map((m: any) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: m.parts || [{ text: m.content }],
     }));
-
-    const chat = ai.chats.create({
-      model: "gemini-3.6-flash",
-      config: {
-        systemInstruction,
-        temperature: 0.2,
-        tools: [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }],
-      },
-      history: history.length > 0 ? (history as any) : undefined,
-    });
 
     const userParts: any[] = [];
 
@@ -174,86 +164,95 @@ export async function POST(req: Request) {
 
     userParts.push({ text: latestMessageObj.content || "Please process this request." });
 
-    let res;
-    try {
-      res = await chat.sendMessage({ message: userParts });
-    } catch (llmError: any) {
-      if (llmError.message?.includes("429") || llmError.message?.includes("RESOURCE_EXHAUSTED")) {
+    let lastError: any = null;
+
+    // Try each API key in the pool if rate limited
+    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+      const currentApiKey = apiKeys[keyIdx];
+      try {
+        const ai = new GoogleGenAI({ apiKey: currentApiKey });
+        const chat = ai.chats.create({
+          model: "gemini-3.6-flash",
+          config: {
+            systemInstruction,
+            temperature: 0.2,
+            tools: [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }],
+          },
+          history: history.length > 0 ? (history as any) : undefined,
+        });
+
+        let res = await chat.sendMessage({ message: userParts });
+
+        const executedToolsLog: Array<{ name: string; args: any; result: ToolExecutionResult }> = [];
+        let allCitations: any[] = [];
+        let finalNavigatedTo: string | undefined;
+
+        // Multi-Step Autonomous Agent Execution Loop
+        let currentStep = 0;
+        while (currentStep < MAX_AGENT_STEPS) {
+          currentStep++;
+          const functionCalls = res.functionCalls;
+
+          if (!functionCalls || functionCalls.length === 0) {
+            break;
+          }
+
+          const functionResponses = [];
+
+          for (const call of functionCalls) {
+            const name = call.name;
+            if (!name) continue;
+            const args = (call.args || {}) as Record<string, any>;
+            
+            const toolResult = await executeVOSTool(name, args);
+            executedToolsLog.push({ name, args, result: toolResult });
+
+            if (toolResult.navigatedTo) {
+              finalNavigatedTo = toolResult.navigatedTo;
+            }
+
+            if (toolResult.citations && Array.isArray(toolResult.citations)) {
+              allCitations = [...allCitations, ...toolResult.citations];
+            }
+
+            functionResponses.push({
+              functionResponse: {
+                name,
+                response: toolResult as Record<string, any>,
+              },
+            });
+          }
+
+          // Send tool outputs back to model in next loop iteration
+          res = await chat.sendMessage({ message: functionResponses as any });
+        }
+
+        const finalText = res.text || "I have executed the requested actions.";
+
         return NextResponse.json({
           success: true,
-          message: "⏳ **Gemini API Rate Limit Reached (Free Tier)**\n\nGoogle's free tier has a temporary request-per-minute limit. Please wait 30 seconds before sending another complex query.\n\n💡 *Tip: Navigation, Timetable queries ('Whats my todays TT'), and Task checks work instantly without consuming quota!*",
-          executedTools: [],
+          message: finalText,
+          executedTools: executedToolsLog,
+          navigatedTo: finalNavigatedTo,
+          citations: allCitations,
         });
-      }
-      throw llmError;
-    }
-
-    const executedToolsLog: Array<{ name: string; args: any; result: ToolExecutionResult }> = [];
-    let allCitations: any[] = [];
-    let finalNavigatedTo: string | undefined;
-
-    // Multi-Step Autonomous Agent Execution Loop
-    let currentStep = 0;
-    while (currentStep < MAX_AGENT_STEPS) {
-      currentStep++;
-      const functionCalls = res.functionCalls;
-
-      if (!functionCalls || functionCalls.length === 0) {
-        break;
-      }
-
-      const functionResponses = [];
-
-      for (const call of functionCalls) {
-        const name = call.name;
-        if (!name) continue;
-        const args = (call.args || {}) as Record<string, any>;
-        
-        const toolResult = await executeVOSTool(name, args);
-        executedToolsLog.push({ name, args, result: toolResult });
-
-        if (toolResult.navigatedTo) {
-          finalNavigatedTo = toolResult.navigatedTo;
-        }
-
-        if (toolResult.citations && Array.isArray(toolResult.citations)) {
-          allCitations = [...allCitations, ...toolResult.citations];
-        }
-
-        functionResponses.push({
-          functionResponse: {
-            name,
-            response: toolResult as Record<string, any>,
-          },
-        });
-      }
-
-      // Send tool outputs back to model in next loop iteration
-      try {
-        res = await chat.sendMessage({ message: functionResponses as any });
-      } catch (loopError: any) {
-        if (loopError.message?.includes("429") || loopError.message?.includes("RESOURCE_EXHAUSTED")) {
+      } catch (err: any) {
+        lastError = err;
+        const isQuota = err.message?.includes("429") || err.message?.includes("RESOURCE_EXHAUSTED");
+        if (isQuota && keyIdx < apiKeys.length - 1) {
+          console.warn(`[VOS-AI] Key ${keyIdx + 1} rate limited. Rotating to Key ${keyIdx + 2}...`);
+          continue; // Automatically rotate to next key!
+        } else if (isQuota) {
           return NextResponse.json({
             success: true,
-            message: "I have successfully executed the requested operations in VOS.",
-            executedTools: executedToolsLog,
-            navigatedTo: finalNavigatedTo,
-            citations: allCitations,
+            message: "⏳ **Gemini API Rate Limit Reached**\n\nAll configured keys reached their temporary quota limit. Please wait 30 seconds, or add your second Gemini API key in Vercel to pool quotas!",
+            executedTools: [],
           });
         }
-        throw loopError;
       }
     }
 
-    const finalText = res.text || "I have executed the requested actions.";
-
-    return NextResponse.json({
-      success: true,
-      message: finalText,
-      executedTools: executedToolsLog,
-      navigatedTo: finalNavigatedTo,
-      citations: allCitations,
-    });
+    throw lastError || new Error("Failed to process request");
   } catch (error: any) {
     logger.error("Error in AI Chat Route", { requestId, error });
     return NextResponse.json({
