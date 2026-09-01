@@ -136,8 +136,12 @@ export async function POST(req: Request) {
       });
     }
 
-    // 🤖 5. FULL AUTONOMOUS LLM ENGINE WITH MULTI-KEY POOL & FAILOVER
+    // 🤖 5. FULL AUTONOMOUS LLM ENGINE WITH DYNAMIC PAYLOAD OPTIMIZATION
     const systemInstruction = await buildVOSSystemContext(currentRoute);
+
+    // Determine if query is an actionable VOS mutation/search command vs. general Q&A / definition
+    const isActionable = hasAttachments || 
+      /(?:add|create|insert|new|delete|remove|update|edit|toggle|mark|change|import|upload|syllabus|search|find|lookup|company|note|document|vault|milestone|mastered|learned|practiced|web search)/i.test(rawText);
 
     // Format previous history
     const history = messages.slice(0, -1).map((m: any) => ({
@@ -166,17 +170,22 @@ export async function POST(req: Request) {
 
     let lastError: any = null;
 
-    // Try each API key in the pool if rate limited
+    // Try each API key in the pool with automatic failover
     for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
       const currentApiKey = apiKeys[keyIdx];
       try {
         const ai = new GoogleGenAI({ apiKey: currentApiKey });
+        
+        // If query is general knowledge/explanation, omit tool schemas to make generation 3x faster!
+        const toolsConfig = isActionable ? [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }] : undefined;
+
         const chat = ai.chats.create({
           model: "gemini-3.6-flash",
           config: {
             systemInstruction,
             temperature: 0.2,
-            tools: [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }],
+            maxOutputTokens: 600,
+            tools: toolsConfig as any,
           },
           history: history.length > 0 ? (history as any) : undefined,
         });
@@ -187,9 +196,9 @@ export async function POST(req: Request) {
         let allCitations: any[] = [];
         let finalNavigatedTo: string | undefined;
 
-        // Multi-Step Autonomous Agent Execution Loop
+        // Multi-Step Autonomous Agent Execution Loop (only runs if tools are active)
         let currentStep = 0;
-        while (currentStep < MAX_AGENT_STEPS) {
+        while (currentStep < MAX_AGENT_STEPS && isActionable) {
           currentStep++;
           const functionCalls = res.functionCalls;
 
