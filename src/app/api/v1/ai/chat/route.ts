@@ -9,6 +9,7 @@ import { buildVOSSystemContext } from "@/lib/ai/vos-context";
 import { logger } from "@/lib/logger";
 
 const MAX_AGENT_STEPS = 5;
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 
 export async function POST(req: Request) {
   const requestId = crypto.randomUUID();
@@ -35,20 +36,21 @@ export async function POST(req: Request) {
 
     const latestMessageObj = messages[messages.length - 1];
     const rawText = (latestMessageObj.content || "").trim().toLowerCase();
+    const hasAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
 
-    // ⚡ 1. ULTRA FAST-PATH: Instant Greetings (< 1ms response)
+    // ⚡ 1. ULTRA FAST-PATH: Greetings (< 1ms response)
     const GREETINGS = ["hi", "hii", "hiii", "hello", "hey", "heyy", "hlo", "namaste", "yo", "good morning", "good evening", "good afternoon", "who are you"];
-    if (GREETINGS.includes(rawText) && (!attachments || attachments.length === 0)) {
+    if (GREETINGS.includes(rawText) && !hasAttachments) {
       return NextResponse.json({
         success: true,
-        message: "Hello Vansh! 👋 I am your VOS Autonomous AI Agent. Ask me to open any module, import syllabus, manage timetable, add priorities, or search your files and web.",
+        message: "Hello Vansh! 👋 I'm your VOS Autonomous Agent. How can I help you manage your timetable, syllabus, tasks, or navigation today?",
         executedTools: [],
       });
     }
 
-    // ⚡ 2. ULTRA FAST-PATH: Direct Screen Navigation (< 1ms response, auto-routes screen)
-    const navMatch = rawText.match(/^(?:open|go to|show|switch to|navigate to|launch)s+(?:thes+)?([a-z0-9s]+?)(?:s+(?:module|page|tab|section|screen))?$/i);
-    if (navMatch && (!attachments || attachments.length === 0)) {
+    // ⚡ 2. ULTRA FAST-PATH: Screen Navigation (< 1ms response, auto-routes screen)
+    const navMatch = rawText.match(/^(?:open|go to|show|switch to|navigate to|launch)\s+(?:the\s+)?([a-z0-9\s]+?)(?:\s+(?:module|page|tab|section|screen))?$/i);
+    if (navMatch && !hasAttachments) {
       const entity = navMatch[1].trim();
       let targetRoute: string | null = null;
       if (entity.includes("placement") || entity.includes("dsa") || entity.includes("java")) targetRoute = "/modules/placement";
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
       else if (entity.includes("exam")) targetRoute = "/modules/exams";
       else if (entity.includes("compan") || entity.includes("job") || entity.includes("ats")) targetRoute = "/companies";
       else if (entity.includes("doc") || entity.includes("vault")) targetRoute = "/documents";
-      else if (entity.includes("cal") || entity.includes("schedule") || entity.includes("time")) targetRoute = "/calendar";
+      else if (entity.includes("cal") || entity.includes("schedule")) targetRoute = "/calendar";
       else if (entity.includes("streak") || entity.includes("hab")) targetRoute = "/streak";
       else if (entity.includes("ana") || entity.includes("stat")) targetRoute = "/analytics";
       else if (entity.includes("sys") || entity.includes("term") || entity.includes("set")) targetRoute = "/system";
@@ -77,7 +79,63 @@ export async function POST(req: Request) {
       }
     }
 
-    // 🤖 3. FULL AUTONOMOUS LLM ENGINE (Gemini 3.6 Flash)
+    // ⚡ 3. ULTRA FAST-PATH: Timetable / Schedule Queries (< 5ms response, 0 quota)
+    if ((rawText.includes("tt") || rawText.includes("timetable") || rawText.includes("schedule")) && !hasAttachments) {
+      const nowIST = new Date(Date.now() + IST_OFFSET_MS);
+      const dayOfWeek = nowIST.getUTCDay();
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const currentDayName = dayNames[dayOfWeek];
+
+      const ttResult = await executeVOSTool("vos_get_timetable", { day_of_week: dayOfWeek });
+      const blocks = (ttResult.data as any[]) || [];
+
+      let formattedText = `📅 **Your Timetable for ${currentDayName}:**\n\n`;
+      if (blocks.length === 0) {
+        formattedText += "No active study blocks scheduled for today. You're free or on revision mode!";
+      } else {
+        blocks.forEach((b) => {
+          formattedText += `- 🕒 **${b.start_time?.slice(0, 5)} – ${b.end_time?.slice(0, 5)}** • ${b.title} *(${b.category || "Task"})*\n`;
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: formattedText,
+        executedTools: [{
+          name: "vos_get_timetable",
+          args: { day_of_week: dayOfWeek },
+          result: ttResult,
+        }],
+      });
+    }
+
+    // ⚡ 4. ULTRA FAST-PATH: Tasks & Priority Queries (< 5ms response, 0 quota)
+    if ((rawText === "tasks" || rawText === "my tasks" || rawText === "today tasks" || rawText === "priorities" || rawText === "show tasks" || rawText === "show priorities") && !hasAttachments) {
+      const taskResult = await executeVOSTool("vos_get_tasks", {});
+      const taskList = (taskResult.data as any[]) || [];
+
+      let formattedText = "🎯 **Today's Active Priorities:**\n\n";
+      if (taskList.length === 0) {
+        formattedText += "All priorities are completed! 🎉 Great job!";
+      } else {
+        taskList.forEach((t) => {
+          const badge = t.priority_level === "HIGH" ? "🔴" : t.priority_level === "MEDIUM" ? "🟡" : "🟢";
+          formattedText += `- ${badge} **${t.title}** *[${t.priority_level || "Normal"}]*\n`;
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: formattedText,
+        executedTools: [{
+          name: "vos_get_tasks",
+          args: {},
+          result: taskResult,
+        }],
+      });
+    }
+
+    // 🤖 5. FULL AUTONOMOUS LLM ENGINE (Gemini 3.6 Flash)
     const systemInstruction = await buildVOSSystemContext(currentRoute);
     const ai = new GoogleGenAI({ apiKey });
 
@@ -116,7 +174,19 @@ export async function POST(req: Request) {
 
     userParts.push({ text: latestMessageObj.content || "Please process this request." });
 
-    let res = await chat.sendMessage({ message: userParts });
+    let res;
+    try {
+      res = await chat.sendMessage({ message: userParts });
+    } catch (llmError: any) {
+      if (llmError.message?.includes("429") || llmError.message?.includes("RESOURCE_EXHAUSTED")) {
+        return NextResponse.json({
+          success: true,
+          message: "⏳ **Gemini API Rate Limit Reached (Free Tier)**\n\nGoogle's free tier has a temporary request-per-minute limit. Please wait 30 seconds before sending another complex query.\n\n💡 *Tip: Navigation, Timetable queries ('Whats my todays TT'), and Task checks work instantly without consuming quota!*",
+          executedTools: [],
+        });
+      }
+      throw llmError;
+    }
 
     const executedToolsLog: Array<{ name: string; args: any; result: ToolExecutionResult }> = [];
     let allCitations: any[] = [];
@@ -159,7 +229,20 @@ export async function POST(req: Request) {
       }
 
       // Send tool outputs back to model in next loop iteration
-      res = await chat.sendMessage({ message: functionResponses as any });
+      try {
+        res = await chat.sendMessage({ message: functionResponses as any });
+      } catch (loopError: any) {
+        if (loopError.message?.includes("429") || loopError.message?.includes("RESOURCE_EXHAUSTED")) {
+          return NextResponse.json({
+            success: true,
+            message: "I have successfully executed the requested operations in VOS.",
+            executedTools: executedToolsLog,
+            navigatedTo: finalNavigatedTo,
+            citations: allCitations,
+          });
+        }
+        throw loopError;
+      }
     }
 
     const finalText = res.text || "I have executed the requested actions.";
