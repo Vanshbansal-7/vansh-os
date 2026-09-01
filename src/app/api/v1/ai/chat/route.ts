@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { VOS_FUNCTION_DECLARATIONS } from "@/lib/ai/vos-tool-declarations";
 import { executeVOSTool, ToolExecutionResult } from "@/lib/ai/vos-tool-executor";
 import { buildVOSSystemContext } from "@/lib/ai/vos-context";
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     if (!apiKey) {
       return NextResponse.json({
         success: true,
-        message: "⚠️ **Gemini API Key Missing in Production Environment**\n\nTo enable Vansh AI on your deployed Vercel site:\n1. Go to your **Vercel Project Dashboard** -> **Settings** -> **Environment Variables**.\n2. Add `GEMINI_API_KEY` with your Google Gemini API key value.\n3. Redeploy your project.",
+        message: "⚠️ **Gemini API Key Missing**\n\nPlease add `GEMINI_API_KEY` to your `.env.local` file or Vercel Environment Variables.",
         executedTools: [],
       });
     }
@@ -34,21 +34,22 @@ export async function POST(req: Request) {
     }
 
     const systemInstruction = await buildVOSSystemContext(currentRoute);
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    // Primary official model: gemini-3.6-flash
-    let modelName = "gemini-3.6-flash";
-    let model = genAI.getGenerativeModel({
-      model: modelName,
-      systemInstruction,
-      tools: [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }],
-    });
+    const ai = new GoogleGenAI({ apiKey });
 
     // Format previous history
     const history = messages.slice(0, -1).map((m: any) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: m.parts || [{ text: m.content }],
     }));
+
+    const chat = ai.chats.create({
+      model: "gemini-3.6-flash",
+      config: {
+        systemInstruction,
+        tools: [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }],
+      },
+      history: history.length > 0 ? (history as any) : undefined,
+    });
 
     const latestMessageObj = messages[messages.length - 1];
     const userParts: any[] = [];
@@ -57,7 +58,6 @@ export async function POST(req: Request) {
     if (attachments && Array.isArray(attachments)) {
       for (const att of attachments) {
         if (att.data && att.type) {
-          // Remove data:image/...;base64, prefix if present
           const base64Data = att.data.includes("base64,") ? att.data.split("base64,")[1] : att.data;
           userParts.push({
             inlineData: {
@@ -71,22 +71,7 @@ export async function POST(req: Request) {
 
     userParts.push({ text: latestMessageObj.content || "Please process this request." });
 
-    let chat = model.startChat({ history });
-    let result;
-
-    try {
-      result = await chat.sendMessage(userParts);
-    } catch (modelErr: any) {
-      logger.warn(`Gemini model ${modelName} failed, falling back to gemini-1.5-flash`, { modelErr });
-      modelName = "gemini-1.5-flash";
-      model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction,
-        tools: [{ functionDeclarations: VOS_FUNCTION_DECLARATIONS }],
-      });
-      chat = model.startChat({ history });
-      result = await chat.sendMessage(userParts);
-    }
+    let res = await chat.sendMessage({ message: userParts });
 
     const executedToolsLog: Array<{ name: string; args: any; result: ToolExecutionResult }> = [];
     let allCitations: any[] = [];
@@ -96,20 +81,20 @@ export async function POST(req: Request) {
     let currentStep = 0;
     while (currentStep < MAX_AGENT_STEPS) {
       currentStep++;
-      const response = result.response;
-      const functionCalls = response.functionCalls();
+      const functionCalls = res.functionCalls;
 
       if (!functionCalls || functionCalls.length === 0) {
-        break; // No further tool calls requested by model
+        break;
       }
 
       const functionResponses = [];
 
       for (const call of functionCalls) {
         const name = call.name;
-        const args = call.args;
+        if (!name) continue;
+        const args = (call.args || {}) as Record<string, any>;
         
-        const toolResult = await executeVOSTool(name, args as any);
+        const toolResult = await executeVOSTool(name, args);
         executedToolsLog.push({ name, args, result: toolResult });
 
         if (toolResult.navigatedTo) {
@@ -122,17 +107,17 @@ export async function POST(req: Request) {
 
         functionResponses.push({
           functionResponse: {
-            name: call.name,
-            response: toolResult,
+            name,
+            response: toolResult as Record<string, any>,
           },
         });
       }
 
-      // Send tool outputs back into the conversation turn
-      result = await chat.sendMessage(functionResponses);
+      // Send tool outputs back to model in next loop iteration
+      res = await chat.sendMessage({ message: functionResponses as any });
     }
 
-    const finalText = result.response.text() || "I have executed the requested actions.";
+    const finalText = res.text || "I have executed the requested actions.";
 
     return NextResponse.json({
       success: true,

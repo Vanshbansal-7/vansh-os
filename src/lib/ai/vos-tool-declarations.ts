@@ -1,6 +1,13 @@
-import { FunctionDeclaration, SchemaType } from "@google/generative-ai";
+export const SchemaType = {
+  OBJECT: "OBJECT",
+  STRING: "STRING",
+  NUMBER: "NUMBER",
+  INTEGER: "INTEGER",
+  BOOLEAN: "BOOLEAN",
+  ARRAY: "ARRAY",
+} as const;
 
-export const VOS_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
+export const VOS_FUNCTION_DECLARATIONS: any[] = [
   // 1. NAVIGATION
   {
     name: "vos_navigate",
