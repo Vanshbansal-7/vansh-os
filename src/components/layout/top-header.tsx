@@ -2,9 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
-import { Search, Bell, Flame, ChevronRight } from "lucide-react";
+import { Search, Flame, ChevronRight } from "lucide-react";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useStreakStore, getISTDate, getISTDateString, getTodayIST } from "@/hooks/use-streak-store";
+import { NotificationCenter } from "@/components/layout/notification-center";
 
 export function TopHeader() {
   const { greeting, userName, currentDateFormatted } = useDashboard();
@@ -61,15 +62,7 @@ export function TopHeader() {
 
         {/* Top Right Utilities */}
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            className="relative w-8 h-8 rounded-xl bg-[#101320] hover:bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500 text-[8.5px] font-extrabold text-white flex items-center justify-center shadow-sm">
-              3
-            </span>
-          </button>
+          <NotificationCenter />
           <div className="w-8 h-8 rounded-full overflow-hidden border border-purple-400/40 shadow-sm cursor-pointer hover:scale-105 transition-transform">
             <img
               src="/assets/founder_avatar.png"
